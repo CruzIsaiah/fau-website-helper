@@ -8,7 +8,7 @@ FAU Website Helper is an AI-powered mini-project that helps students find the ri
 - Curated directory of common FAU resources
 - Saved FAU links and notes with CRUD operations
 - AI resource finder for plain-English student questions
-- AI page summarizer for pasted FAU page text
+- AI page summarizer from a public FAU link, with optional pasted text fallback
 - Loading states, validation, friendly errors, and AI rate limiting
 - Automated tests for auth, saved-resource CRUD, invalid input, unauthorized access, and AI endpoints
 
@@ -26,7 +26,7 @@ The AI matches the question to curated FAU resources and explains why each page 
 
 ### Page Summarization and Sentiment
 
-Users paste text from an FAU page. The AI returns:
+Users paste a public FAU page link. The app reads the page text automatically, then the AI returns:
 
 - plain-English summary
 - key details

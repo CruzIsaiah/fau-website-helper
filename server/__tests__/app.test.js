@@ -130,13 +130,21 @@ describe("ai endpoints", () => {
       .post("/api/ai/summarize")
       .set("Authorization", `Bearer ${token}`)
       .send({
-        title: "FAU page",
-        url: "https://www.fau.edu/registrar/",
-        text: "Students should review deadlines, submit required forms, and contact the listed office for help."
+        url: "https://www.fau.edu/registrar/"
       });
 
     expect(response.status).toBe(200);
     expect(response.body.summary).toBeTruthy();
     expect(response.body.nextSteps).toBeTruthy();
+  });
+
+  it("rejects non-FAU summarize URLs", async () => {
+    const token = await register();
+    const response = await request(app)
+      .post("/api/ai/summarize")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ url: "https://example.com/page" });
+
+    expect(response.status).toBe(400);
   });
 });

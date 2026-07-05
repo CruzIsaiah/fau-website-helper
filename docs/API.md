@@ -118,11 +118,11 @@ Request:
 
 ```json
 {
-  "title": "Registrar page",
-  "url": "https://www.fau.edu/registrar/",
-  "text": "Paste FAU page text here..."
+  "url": "https://www.fau.edu/registrar/"
 }
 ```
+
+Optional `text` may be included if the page cannot be read automatically.
 
 Response:
 

@@ -236,7 +236,7 @@ function Finder({ token, resources, onSave }) {
 }
 
 function Summarizer({ token }) {
-  const [form, setForm] = useState({ title: "", url: "", text: "" });
+  const [form, setForm] = useState({ url: "", text: "" });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -250,7 +250,10 @@ function Summarizer({ token }) {
       const data = await api("/ai/summarize", {
         token,
         method: "POST",
-        body: JSON.stringify(form)
+        body: JSON.stringify({
+          url: form.url,
+          text: form.text
+        })
       });
       setResult(data);
     } catch (err) {
@@ -268,24 +271,24 @@ function Summarizer({ token }) {
       </div>
       <form onSubmit={summarize}>
         <label>
-          Page title
-          <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Registrar deadline page" />
-        </label>
-        <label>
-          URL
-          <input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://www.fau.edu/..." />
-        </label>
-        <label>
-          Paste page text
-          <textarea
-            value={form.text}
-            onChange={(e) => setForm({ ...form, text: e.target.value })}
-            placeholder="Paste confusing FAU page text here..."
+          FAU page link
+          <input
+            value={form.url}
+            onChange={(e) => setForm({ ...form, url: e.target.value })}
+            placeholder="https://www.fau.edu/registrar/"
             required
           />
         </label>
+        <label>
+          Notes or pasted text
+          <textarea
+            value={form.text}
+            onChange={(e) => setForm({ ...form, text: e.target.value })}
+            placeholder="Optional: paste page text here if the page cannot be read automatically."
+          />
+        </label>
         {error && <p className="error">{error}</p>}
-        <button className="secondary" disabled={loading || form.text.length < 20}>
+        <button className="secondary" disabled={loading || form.url.length < 12}>
           {loading ? <Loader2 className="spin" size={18} /> : <Sparkles size={18} />}
           Summarize
         </button>
