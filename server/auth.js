@@ -5,6 +5,18 @@ import { getSupabaseAdminClient, getSupabaseAuthClient, shouldUseSupabase } from
 
 const secret = () => process.env.JWT_SECRET || "dev-only-secret-change-me";
 
+function normalizeSupabaseAuthError(error) {
+  if (!error) return null;
+
+  if (error.message?.toLowerCase().includes("invalid api key")) {
+    error.status = 503;
+    error.code = "invalid_supabase_key";
+    error.message = "Supabase is connected, but one of the API keys is invalid. Check the Supabase URL, anon key, and service-role key in Vercel.";
+  }
+
+  return error;
+}
+
 export async function hashPassword(password) {
   return bcrypt.hash(password, 10);
 }
@@ -40,8 +52,7 @@ export async function registerUser({ name, email, password }) {
     });
 
     if (createError && !createError.message.toLowerCase().includes("already")) {
-      createError.status = 400;
-      throw createError;
+      throw normalizeSupabaseAuthError(createError);
     }
 
     const { data, error } = await auth.auth.signInWithPassword({
@@ -50,6 +61,7 @@ export async function registerUser({ name, email, password }) {
     });
 
     if (error) {
+      if (normalizeSupabaseAuthError(error)?.code === "invalid_supabase_key") throw error;
       error.status = createError ? 409 : 401;
       error.message = createError ? "An account already exists for that email." : "Email or password is incorrect.";
       throw error;
@@ -90,6 +102,7 @@ export async function loginUser({ email, password }) {
     });
 
     if (error) {
+      if (normalizeSupabaseAuthError(error)?.code === "invalid_supabase_key") throw error;
       error.status = 401;
       error.message = "Email or password is incorrect.";
       throw error;
