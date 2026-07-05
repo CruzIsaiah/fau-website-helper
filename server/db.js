@@ -1,11 +1,11 @@
 import { v4 as uuid } from "uuid";
 
 const users = new Map();
-const tasks = new Map();
+const savedResources = new Map();
 
 export function resetDb() {
   users.clear();
-  tasks.clear();
+  savedResources.clear();
 }
 
 export function createUser(user) {
@@ -19,10 +19,6 @@ export function findUserByEmail(email) {
   return [...users.values()].find((user) => user.email === email.toLowerCase());
 }
 
-export function findUserById(id) {
-  return users.get(id);
-}
-
 export function publicUser(user) {
   return {
     id: user.id,
@@ -32,45 +28,44 @@ export function publicUser(user) {
   };
 }
 
-export function listTasks(userId) {
-  return [...tasks.values()]
-    .filter((task) => task.userId === userId)
+export function listSavedResources(userId) {
+  return [...savedResources.values()]
+    .filter((item) => item.userId === userId)
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 }
 
-export function createTask(userId, task) {
+export function createSavedResource(userId, resource) {
   const now = new Date().toISOString();
   const record = {
     id: uuid(),
     userId,
-    title: task.title,
-    description: task.description || "",
-    priority: task.priority || "medium",
-    status: task.status || "todo",
-    dueDate: task.dueDate || "",
+    title: resource.title,
+    url: resource.url,
+    notes: resource.notes || "",
+    category: resource.category || "General",
     createdAt: now,
     updatedAt: now
   };
-  tasks.set(record.id, record);
+  savedResources.set(record.id, record);
   return record;
 }
 
-export function updateTask(userId, id, updates) {
-  const task = tasks.get(id);
-  if (!task || task.userId !== userId) return null;
+export function updateSavedResource(userId, id, updates) {
+  const record = savedResources.get(id);
+  if (!record || record.userId !== userId) return null;
   const next = {
-    ...task,
+    ...record,
     ...updates,
-    id: task.id,
+    id: record.id,
     userId,
     updatedAt: new Date().toISOString()
   };
-  tasks.set(id, next);
+  savedResources.set(id, next);
   return next;
 }
 
-export function deleteTask(userId, id) {
-  const task = tasks.get(id);
-  if (!task || task.userId !== userId) return false;
-  return tasks.delete(id);
+export function deleteSavedResource(userId, id) {
+  const record = savedResources.get(id);
+  if (!record || record.userId !== userId) return false;
+  return savedResources.delete(id);
 }

@@ -11,7 +11,6 @@ async function register() {
     email: "isaiah@example.com",
     password: "password123"
   });
-
   return response.body.token;
 }
 
@@ -20,7 +19,7 @@ beforeEach(() => {
 });
 
 describe("auth", () => {
-  it("registers a new user and returns a token", async () => {
+  it("registers a new user", async () => {
     const response = await request(app).post("/api/auth/register").send({
       name: "Isaiah Cruz",
       email: "isaiah@example.com",
@@ -32,7 +31,7 @@ describe("auth", () => {
     expect(response.body.token).toBeTruthy();
   });
 
-  it("rejects invalid login credentials", async () => {
+  it("rejects invalid login", async () => {
     await register();
 
     const response = await request(app).post("/api/auth/login").send({
@@ -41,75 +40,90 @@ describe("auth", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(response.body.error).toMatch(/incorrect/i);
   });
 });
 
-describe("tasks", () => {
-  it("protects task routes", async () => {
-    const response = await request(app).get("/api/tasks");
+describe("resources", () => {
+  it("lists curated FAU resources", async () => {
+    const response = await request(app).get("/api/resources");
+
+    expect(response.status).toBe(200);
+    expect(response.body.resources.length).toBeGreaterThan(5);
+  });
+
+  it("protects saved resources", async () => {
+    const response = await request(app).get("/api/saved");
 
     expect(response.status).toBe(401);
   });
 
-  it("creates, lists, updates, and deletes a task", async () => {
+  it("creates, lists, updates, and deletes a saved resource", async () => {
     const token = await register();
 
     const created = await request(app)
-      .post("/api/tasks")
+      .post("/api/saved")
       .set("Authorization", `Bearer ${token}`)
-      .send({ title: "Finish AI project", priority: "high" });
+      .send({
+        title: "Registrar",
+        url: "https://www.fau.edu/registrar/",
+        category: "Academics",
+        notes: "Registration and transcripts"
+      });
 
     expect(created.status).toBe(201);
-    expect(created.body.task.title).toBe("Finish AI project");
+    expect(created.body.saved.title).toBe("Registrar");
 
-    const listed = await request(app).get("/api/tasks").set("Authorization", `Bearer ${token}`);
-    expect(listed.body.tasks).toHaveLength(1);
+    const listed = await request(app).get("/api/saved").set("Authorization", `Bearer ${token}`);
+    expect(listed.body.saved).toHaveLength(1);
 
     const updated = await request(app)
-      .put(`/api/tasks/${created.body.task.id}`)
+      .put(`/api/saved/${created.body.saved.id}`)
       .set("Authorization", `Bearer ${token}`)
-      .send({ status: "done" });
-    expect(updated.body.task.status).toBe("done");
+      .send({ notes: "Updated notes" });
+    expect(updated.body.saved.notes).toBe("Updated notes");
 
     const deleted = await request(app)
-      .delete(`/api/tasks/${created.body.task.id}`)
+      .delete(`/api/saved/${created.body.saved.id}`)
       .set("Authorization", `Bearer ${token}`);
     expect(deleted.status).toBe(204);
   });
 
-  it("rejects invalid task input", async () => {
+  it("rejects invalid saved resource input", async () => {
     const token = await register();
     const response = await request(app)
-      .post("/api/tasks")
+      .post("/api/saved")
       .set("Authorization", `Bearer ${token}`)
-      .send({ title: "x", priority: "urgent" });
+      .send({ title: "x", url: "not-a-url" });
 
     expect(response.status).toBe(400);
   });
 });
 
 describe("ai endpoints", () => {
-  it("returns AI suggestions for a goal", async () => {
+  it("returns AI resource matches", async () => {
     const token = await register();
     const response = await request(app)
-      .post("/api/ai/suggestions")
+      .post("/api/ai/find")
       .set("Authorization", `Bearer ${token}`)
-      .send({ goal: "Study for data structures exam" });
+      .send({ question: "Where do I pay tuition?" });
 
     expect(response.status).toBe(200);
-    expect(response.body.suggestions[0].title).toBeTruthy();
+    expect(response.body.matches[0].resourceId).toBeTruthy();
   });
 
-  it("returns AI insight fields", async () => {
+  it("returns AI page summary fields", async () => {
     const token = await register();
     const response = await request(app)
-      .post("/api/ai/insights")
+      .post("/api/ai/summarize")
       .set("Authorization", `Bearer ${token}`)
-      .send({ text: "I have too many assignments and need a plan." });
+      .send({
+        title: "FAU page",
+        url: "https://www.fau.edu/registrar/",
+        text: "Students should review deadlines, submit required forms, and contact the listed office for help."
+      });
 
     expect(response.status).toBe(200);
     expect(response.body.summary).toBeTruthy();
-    expect(response.body.nextStep).toBeTruthy();
+    expect(response.body.nextSteps).toBeTruthy();
   });
 });

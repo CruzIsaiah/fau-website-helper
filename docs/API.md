@@ -1,24 +1,11 @@
 # API Documentation
 
-Base URL: `http://localhost:5001/api`
+Base URL: `http://localhost:5010/api`
 
 Authenticated endpoints require:
 
 ```http
 Authorization: Bearer <token>
-```
-
-## Health
-
-### GET `/health`
-
-Response:
-
-```json
-{
-  "status": "ok",
-  "aiConfigured": true
-}
 ```
 
 ## Auth
@@ -42,17 +29,11 @@ Response `201`:
   "user": {
     "id": "uuid",
     "name": "Isaiah Cruz",
-    "email": "isaiah@example.com",
-    "createdAt": "2026-07-05T00:00:00.000Z"
+    "email": "isaiah@example.com"
   },
   "token": "jwt"
 }
 ```
-
-Errors:
-
-- `400` invalid input
-- `409` account already exists
 
 ### POST `/auth/login`
 
@@ -65,170 +46,99 @@ Request:
 }
 ```
 
-Response `200`:
+## Resources
 
-```json
-{
-  "user": {
-    "id": "uuid",
-    "name": "Isaiah Cruz",
-    "email": "isaiah@example.com",
-    "createdAt": "2026-07-05T00:00:00.000Z"
-  },
-  "token": "jwt"
-}
-```
+### GET `/resources`
 
-Errors:
+Returns curated FAU resource links.
 
-- `400` invalid input
-- `401` incorrect credentials
+## Saved Resources
 
-## Tasks
+### GET `/saved`
 
-### GET `/tasks`
+Returns the signed-in user's saved FAU resources.
 
-Response `200`:
-
-```json
-{
-  "tasks": [
-    {
-      "id": "uuid",
-      "userId": "uuid",
-      "title": "Finish AI project",
-      "description": "Add docs and tests",
-      "priority": "high",
-      "status": "todo",
-      "dueDate": "2026-07-10",
-      "createdAt": "2026-07-05T00:00:00.000Z",
-      "updatedAt": "2026-07-05T00:00:00.000Z"
-    }
-  ]
-}
-```
-
-### POST `/tasks`
+### POST `/saved`
 
 Request:
 
 ```json
 {
-  "title": "Finish AI project",
-  "description": "Add OpenAI task suggestions",
-  "priority": "high",
-  "status": "todo",
-  "dueDate": "2026-07-10"
+  "title": "Registrar",
+  "url": "https://www.fau.edu/registrar/",
+  "category": "Academics",
+  "notes": "Registration and transcript info"
 }
 ```
 
-Response `201`:
-
-```json
-{
-  "task": {
-    "id": "uuid",
-    "title": "Finish AI project",
-    "description": "Add OpenAI task suggestions",
-    "priority": "high",
-    "status": "todo",
-    "dueDate": "2026-07-10"
-  }
-}
-```
-
-### PUT `/tasks/:id`
+### PUT `/saved/:id`
 
 Request:
 
 ```json
 {
-  "status": "done"
+  "notes": "Important page for class withdrawal."
 }
 ```
 
-Response `200`:
+### DELETE `/saved/:id`
 
-```json
-{
-  "task": {
-    "id": "uuid",
-    "title": "Finish AI project",
-    "status": "done"
-  }
-}
-```
-
-Errors:
-
-- `400` invalid input
-- `404` task not found
-
-### DELETE `/tasks/:id`
-
-Response `204` with no body.
-
-Errors:
-
-- `404` task not found
+Returns `204`.
 
 ## AI
 
-### POST `/ai/suggestions`
+### POST `/ai/find`
 
 Request:
 
 ```json
 {
-  "goal": "Prepare for finals while working part-time",
-  "context": "Current task list or notes"
+  "question": "Where do I pay tuition?"
 }
 ```
 
-Response `200`:
+Response:
 
 ```json
 {
-  "suggestions": [
+  "answer": "These FAU resources are the best starting points.",
+  "matches": [
     {
-      "title": "Create a finals study calendar",
-      "description": "Block review time for each course around work shifts.",
-      "priority": "high"
+      "resourceId": "controller",
+      "reason": "This page covers tuition billing and payments.",
+      "confidence": "high"
     }
   ]
 }
 ```
 
-Errors:
-
-- `400` invalid input
-- `401` unauthorized
-- `429` AI rate limit reached
-- `503` missing OpenAI API key
-
-### POST `/ai/insights`
+### POST `/ai/summarize`
 
 Request:
 
 ```json
 {
-  "text": "I have two assignments, a quiz, and a work shift tomorrow."
+  "title": "Registrar page",
+  "url": "https://www.fau.edu/registrar/",
+  "text": "Paste FAU page text here..."
 }
 ```
 
-Response `200`:
+Response:
 
 ```json
 {
-  "summary": "The user has several near-term obligations.",
-  "sentiment": "stressed",
-  "nextStep": "Prioritize the quiz and split the assignments into smaller tasks."
+  "summary": "This page explains registration and student records steps.",
+  "keyDetails": ["Watch deadlines", "Use official forms"],
+  "nextSteps": ["Open the official page", "Contact the listed office"],
+  "sentiment": "neutral"
 }
 ```
 
-Errors:
+## Common Errors
 
 - `400` invalid input
 - `401` unauthorized
+- `404` saved resource not found
 - `429` AI rate limit reached
-- `503` missing OpenAI API key
+- `503` OpenAI API key missing

@@ -18,7 +18,7 @@ async function createJsonResponse({ system, user, fallback }) {
     const client = getClient();
     const response = await client.chat.completions.create({
       model: process.env.OPENAI_MODEL || "gpt-5.4-mini",
-      temperature: 0.3,
+      temperature: 0.2,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },
@@ -37,39 +37,40 @@ async function createJsonResponse({ system, user, fallback }) {
 
     if (error.status === 503) throw error;
 
-    const apiError = new Error("The AI assistant could not complete that request. Please try again.");
+    const apiError = new Error("The FAU helper could not complete that AI request. Please try again.");
     apiError.status = error.status || 502;
     apiError.code = "ai_request_failed";
     throw apiError;
   }
 }
 
-export async function suggestTasks({ goal, context = "" }) {
+export async function matchFauResources({ question, resources }) {
+  const fallbackMatches = resources
+    .map((resource) => ({
+      resourceId: resource.id,
+      reason: `This page may help with ${question}.`,
+      confidence: "medium"
+    }))
+    .slice(0, 3);
+
   return createJsonResponse({
-    fallback: {
-      suggestions: [
-        {
-          title: `Plan ${goal}`,
-          description: "Break the goal into milestones and choose the first task to complete today.",
-          priority: "medium"
-        }
-      ]
-    },
+    fallback: { answer: "These FAU resources are the best starting points.", matches: fallbackMatches },
     system:
-      "You are a practical productivity assistant. Return only JSON with a suggestions array of 3 to 5 objects. Each object has title, description, and priority fields. Priority must be low, medium, or high.",
-    user: `Goal: ${goal}\nContext: ${context || "No extra context."}`
+      "You help FAU students find the right official FAU page. Return only JSON with answer and matches. matches is an array of 3 to 5 objects with resourceId, reason, and confidence fields. Use only resource IDs from the provided directory.",
+    user: `Student question: ${question}\n\nFAU resource directory:\n${JSON.stringify(resources)}`
   });
 }
 
-export async function analyzeTasks({ text }) {
+export async function summarizeFauContent({ title = "FAU page", url = "", text }) {
   return createJsonResponse({
     fallback: {
-      summary: text.slice(0, 140),
-      sentiment: "neutral",
-      nextStep: "Pick one specific action and schedule time for it."
+      summary: text.slice(0, 180),
+      keyDetails: ["Review the page for deadlines, forms, contacts, and next steps."],
+      nextSteps: ["Open the official FAU page.", "Contact the listed FAU office if details are unclear."],
+      sentiment: "neutral"
     },
     system:
-      "Analyze the user's task notes. Return only JSON with summary, sentiment, and nextStep fields. Sentiment must be positive, neutral, stressed, or blocked.",
-    user: text
+      "Summarize FAU website text for a student. Return only JSON with summary, keyDetails, nextSteps, and sentiment. sentiment must be positive, neutral, urgent, or confusing.",
+    user: `Page title: ${title}\nURL: ${url || "Not provided"}\nText:\n${text}`
   });
 }

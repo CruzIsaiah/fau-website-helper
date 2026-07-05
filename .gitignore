@@ -4,6 +4,7 @@ dist
 .DS_Store
 coverage
 npm-debug.log*
+.vercel
 work
 outputs
-.vercel
+fau-helper

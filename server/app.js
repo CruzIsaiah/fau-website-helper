@@ -7,15 +7,16 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { requireAuth, hashPassword, signToken, verifyPassword } from "./auth.js";
 import {
-  createTask,
+  createSavedResource,
   createUser,
-  deleteTask,
+  deleteSavedResource,
   findUserByEmail,
-  listTasks,
+  listSavedResources,
   publicUser,
-  updateTask
+  updateSavedResource
 } from "./db.js";
-import { analyzeTasks, suggestTasks } from "./ai.js";
+import { fauResources } from "./resources.js";
+import { matchFauResources, summarizeFauContent } from "./ai.js";
 
 dotenv.config();
 
@@ -31,21 +32,21 @@ const registerSchema = authSchema.extend({
   name: z.string().min(2).max(80)
 });
 
-const taskSchema = z.object({
-  title: z.string().min(2).max(120),
-  description: z.string().max(1000).optional().default(""),
-  priority: z.enum(["low", "medium", "high"]).optional().default("medium"),
-  status: z.enum(["todo", "doing", "done"]).optional().default("todo"),
-  dueDate: z.string().optional().default("")
+const savedResourceSchema = z.object({
+  title: z.string().min(2).max(140),
+  url: z.string().url(),
+  notes: z.string().max(1200).optional().default(""),
+  category: z.string().max(80).optional().default("General")
 });
 
-const suggestionSchema = z.object({
-  goal: z.string().min(3).max(400),
-  context: z.string().max(1200).optional().default("")
+const findSchema = z.object({
+  question: z.string().min(3).max(600)
 });
 
-const analysisSchema = z.object({
-  text: z.string().min(3).max(3000)
+const summarizeSchema = z.object({
+  title: z.string().max(140).optional().default("FAU page"),
+  url: z.string().url().optional().or(z.literal("")).default(""),
+  text: z.string().min(20).max(6000)
 });
 
 function validate(schema, body) {
@@ -82,7 +83,6 @@ export function createApp() {
       if (findUserByEmail(data.email)) {
         return res.status(409).json({ error: "An account already exists for that email." });
       }
-
       const user = createUser({
         name: data.name.trim(),
         email: data.email.toLowerCase(),
@@ -107,49 +107,53 @@ export function createApp() {
     }
   });
 
-  app.get("/api/tasks", requireAuth, (req, res) => {
-    res.json({ tasks: listTasks(req.user.id) });
+  app.get("/api/resources", (_req, res) => {
+    res.json({ resources: fauResources });
   });
 
-  app.post("/api/tasks", requireAuth, (req, res, next) => {
+  app.get("/api/saved", requireAuth, (req, res) => {
+    res.json({ saved: listSavedResources(req.user.id) });
+  });
+
+  app.post("/api/saved", requireAuth, (req, res, next) => {
     try {
-      const task = createTask(req.user.id, validate(taskSchema, req.body));
-      res.status(201).json({ task });
+      const saved = createSavedResource(req.user.id, validate(savedResourceSchema, req.body));
+      res.status(201).json({ saved });
     } catch (error) {
       next(error);
     }
   });
 
-  app.put("/api/tasks/:id", requireAuth, (req, res, next) => {
+  app.put("/api/saved/:id", requireAuth, (req, res, next) => {
     try {
-      const task = updateTask(req.user.id, req.params.id, validate(taskSchema.partial(), req.body));
-      if (!task) return res.status(404).json({ error: "Task not found." });
-      res.json({ task });
+      const saved = updateSavedResource(req.user.id, req.params.id, validate(savedResourceSchema.partial(), req.body));
+      if (!saved) return res.status(404).json({ error: "Saved resource not found." });
+      res.json({ saved });
     } catch (error) {
       next(error);
     }
   });
 
-  app.delete("/api/tasks/:id", requireAuth, (req, res) => {
-    if (!deleteTask(req.user.id, req.params.id)) {
-      return res.status(404).json({ error: "Task not found." });
+  app.delete("/api/saved/:id", requireAuth, (req, res) => {
+    if (!deleteSavedResource(req.user.id, req.params.id)) {
+      return res.status(404).json({ error: "Saved resource not found." });
     }
     res.status(204).end();
   });
 
-  app.post("/api/ai/suggestions", requireAuth, aiLimiter, async (req, res, next) => {
+  app.post("/api/ai/find", requireAuth, aiLimiter, async (req, res, next) => {
     try {
-      const data = validate(suggestionSchema, req.body);
-      res.json(await suggestTasks(data));
+      const data = validate(findSchema, req.body);
+      res.json(await matchFauResources({ ...data, resources: fauResources }));
     } catch (error) {
       next(error);
     }
   });
 
-  app.post("/api/ai/insights", requireAuth, aiLimiter, async (req, res, next) => {
+  app.post("/api/ai/summarize", requireAuth, aiLimiter, async (req, res, next) => {
     try {
-      const data = validate(analysisSchema, req.body);
-      res.json(await analyzeTasks(data));
+      const data = validate(summarizeSchema, req.body);
+      res.json(await summarizeFauContent(data));
     } catch (error) {
       next(error);
     }

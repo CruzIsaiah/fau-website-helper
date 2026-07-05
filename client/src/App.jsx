@@ -1,21 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bot, CheckCircle2, Loader2, LogOut, Plus, Sparkles, Trash2 } from "lucide-react";
+import { BookOpen, ExternalLink, Loader2, LogOut, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
 const API = "/api";
-const ACCOUNT_CACHE_KEY = "taskflow-demo-accounts";
+const ACCOUNT_CACHE_KEY = "fau-helper-demo-accounts";
 
 function useStoredSession() {
   const [session, setSession] = useState(() => {
-    const raw = localStorage.getItem("taskflow-session");
+    const raw = localStorage.getItem("fau-helper-session");
     return raw ? JSON.parse(raw) : null;
   });
 
   function save(next) {
     setSession(next);
-    if (next) localStorage.setItem("taskflow-session", JSON.stringify(next));
-    else localStorage.removeItem("taskflow-session");
+    if (next) localStorage.setItem("fau-helper-session", JSON.stringify(next));
+    else localStorage.removeItem("fau-helper-session");
   }
 
   return [session, save];
@@ -100,9 +100,9 @@ function Auth({ onSession }) {
     <main className="auth-shell">
       <section className="auth-panel">
         <div>
-          <p className="eyebrow">TaskFlow AI</p>
-          <h1>Plan work with a smarter task board.</h1>
-          <p className="lead">Create tasks, organize priorities, and ask AI for useful next steps when the list gets fuzzy.</p>
+          <p className="eyebrow">FAU Website Helper</p>
+          <h1>Find the FAU page you actually need.</h1>
+          <p className="lead">Ask in plain English, save important links, and turn confusing page text into clear next steps.</p>
         </div>
 
         <form onSubmit={submit} className="auth-form">
@@ -114,7 +114,6 @@ function Auth({ onSession }) {
               Register
             </button>
           </div>
-
           {mode === "register" && (
             <label>
               Name
@@ -137,7 +136,7 @@ function Auth({ onSession }) {
           </label>
           {error && <p className="error">{error}</p>}
           <button className="primary" disabled={loading}>
-            {loading ? <Loader2 className="spin" size={18} /> : <CheckCircle2 size={18} />}
+            {loading ? <Loader2 className="spin" size={18} /> : <BookOpen size={18} />}
             {mode === "login" ? "Sign in" : "Create account"}
           </button>
         </form>
@@ -146,24 +145,54 @@ function Auth({ onSession }) {
   );
 }
 
-function TaskForm({ token, onCreated }) {
-  const [task, setTask] = useState({ title: "", description: "", priority: "medium", dueDate: "" });
+function ResourceCard({ resource, match, onSave }) {
+  return (
+    <article className="resource-card">
+      <div>
+        <span>{resource.category}</span>
+        <h3>{resource.title}</h3>
+        <p>{match?.reason || resource.description}</p>
+        {match?.confidence && <small>AI confidence: {match.confidence}</small>}
+      </div>
+      <div className="card-actions">
+        <a href={resource.url} target="_blank" rel="noreferrer" title="Open official FAU page">
+          <ExternalLink size={17} />
+        </a>
+        <button title="Save resource" onClick={() => onSave(resource, match?.reason || "")}>
+          <Plus size={17} />
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function Finder({ token, resources, onSave }) {
+  const [question, setQuestion] = useState("");
+  const [matches, setMatches] = useState([]);
+  const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function submit(event) {
+  const matchedResources = useMemo(() => {
+    if (matches.length === 0) return resources.slice(0, 6).map((resource) => ({ resource }));
+    return matches
+      .map((match) => ({ match, resource: resources.find((resource) => resource.id === match.resourceId) }))
+      .filter((item) => item.resource);
+  }, [matches, resources]);
+
+  async function findPages(event) {
     event.preventDefault();
     setLoading(true);
     setError("");
 
     try {
-      const data = await api("/tasks", {
+      const data = await api("/ai/find", {
         token,
         method: "POST",
-        body: JSON.stringify(task)
+        body: JSON.stringify({ question })
       });
-      onCreated(data.task);
-      setTask({ title: "", description: "", priority: "medium", dueDate: "" });
+      setAnswer(data.answer || "");
+      setMatches(data.matches || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -172,165 +201,150 @@ function TaskForm({ token, onCreated }) {
   }
 
   return (
-    <form className="task-form" onSubmit={submit}>
-      <input
-        placeholder="Task title"
-        value={task.title}
-        onChange={(e) => setTask({ ...task, title: e.target.value })}
-        required
-      />
-      <textarea
-        placeholder="Details"
-        value={task.description}
-        onChange={(e) => setTask({ ...task, description: e.target.value })}
-      />
-      <div className="form-row">
-        <select value={task.priority} onChange={(e) => setTask({ ...task, priority: e.target.value })}>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-        </select>
-        <input type="date" value={task.dueDate} onChange={(e) => setTask({ ...task, dueDate: e.target.value })} />
-        <button className="primary" disabled={loading}>
-          {loading ? <Loader2 className="spin" size={18} /> : <Plus size={18} />}
-          Add
-        </button>
+    <section className="finder">
+      <form onSubmit={findPages} className="search-box">
+        <label>
+          What are you trying to find?
+          <div className="search-row">
+            <input
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder="Example: I need to withdraw from a class"
+              required
+            />
+            <button className="primary" disabled={loading || question.length < 3}>
+              {loading ? <Loader2 className="spin" size={18} /> : <Search size={18} />}
+              Find
+            </button>
+          </div>
+        </label>
+        {error && <p className="error">{error}</p>}
+      </form>
+
+      {answer && <p className="ai-answer">{answer}</p>}
+
+      <div className="resource-grid">
+        {matchedResources.map(({ resource, match }) => (
+          <ResourceCard key={resource.id} resource={resource} match={match} onSave={onSave} />
+        ))}
       </div>
-      {error && <p className="error">{error}</p>}
-    </form>
+    </section>
   );
 }
 
-function AiPanel({ token, onAddSuggestion, taskText }) {
-  const [goal, setGoal] = useState("");
-  const [loading, setLoading] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
-  const [insight, setInsight] = useState(null);
+function Summarizer({ token }) {
+  const [form, setForm] = useState({ title: "", url: "", text: "" });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function getSuggestions() {
-    setLoading("suggestions");
+  async function summarize(event) {
+    event.preventDefault();
+    setLoading(true);
     setError("");
 
     try {
-      const data = await api("/ai/suggestions", {
+      const data = await api("/ai/summarize", {
         token,
         method: "POST",
-        body: JSON.stringify({ goal, context: taskText })
+        body: JSON.stringify(form)
       });
-      setSuggestions(data.suggestions || []);
+      setResult(data);
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading("");
-    }
-  }
-
-  async function getInsights() {
-    setLoading("insights");
-    setError("");
-
-    try {
-      const data = await api("/ai/insights", {
-        token,
-        method: "POST",
-        body: JSON.stringify({ text: taskText || "No tasks yet." })
-      });
-      setInsight(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading("");
+      setLoading(false);
     }
   }
 
   return (
-    <aside className="ai-panel">
+    <aside className="summarizer">
       <div className="panel-title">
-        <Bot size={20} />
-        <h2>AI assistant</h2>
+        <Sparkles size={20} />
+        <h2>Page summarizer</h2>
       </div>
-
-      <label>
-        Goal
-        <textarea
-          placeholder="Example: prepare for finals while keeping my part-time schedule"
-          value={goal}
-          onChange={(e) => setGoal(e.target.value)}
-        />
-      </label>
-
-      <div className="ai-actions">
-        <button className="primary" onClick={getSuggestions} disabled={loading === "suggestions" || goal.length < 3}>
-          {loading === "suggestions" ? <Loader2 className="spin" size={18} /> : <Sparkles size={18} />}
-          Suggestions
+      <form onSubmit={summarize}>
+        <label>
+          Page title
+          <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Registrar deadline page" />
+        </label>
+        <label>
+          URL
+          <input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://www.fau.edu/..." />
+        </label>
+        <label>
+          Paste page text
+          <textarea
+            value={form.text}
+            onChange={(e) => setForm({ ...form, text: e.target.value })}
+            placeholder="Paste confusing FAU page text here..."
+            required
+          />
+        </label>
+        {error && <p className="error">{error}</p>}
+        <button className="secondary" disabled={loading || form.text.length < 20}>
+          {loading ? <Loader2 className="spin" size={18} /> : <Sparkles size={18} />}
+          Summarize
         </button>
-        <button className="secondary" onClick={getInsights} disabled={loading === "insights"}>
-          {loading === "insights" ? <Loader2 className="spin" size={18} /> : <Bot size={18} />}
-          Insights
-        </button>
-      </div>
+      </form>
 
-      {error && <p className="error">{error}</p>}
-
-      {suggestions.length > 0 && (
-        <div className="suggestions">
-          {suggestions.map((item, index) => (
-            <article key={`${item.title}-${index}`} className="suggestion">
-              <div>
-                <strong>{item.title}</strong>
-                <p>{item.description}</p>
-              </div>
-              <button
-                title="Add suggestion"
-                onClick={() =>
-                  onAddSuggestion({
-                    title: item.title,
-                    description: item.description,
-                    priority: item.priority || "medium"
-                  })
-                }
-              >
-                <Plus size={16} />
-              </button>
-            </article>
-          ))}
-        </div>
-      )}
-
-      {insight && (
-        <div className="insight">
-          <span>{insight.sentiment}</span>
-          <p>{insight.summary}</p>
-          <strong>{insight.nextStep}</strong>
+      {result && (
+        <div className="summary">
+          <span>{result.sentiment}</span>
+          <p>{result.summary}</p>
+          <h3>Key details</h3>
+          <ul>{(result.keyDetails || []).map((item) => <li key={item}>{item}</li>)}</ul>
+          <h3>Next steps</h3>
+          <ul>{(result.nextSteps || []).map((item) => <li key={item}>{item}</li>)}</ul>
         </div>
       )}
     </aside>
   );
 }
 
+function SavedList({ saved, onDelete }) {
+  return (
+    <section className="saved">
+      <h2>Saved FAU links</h2>
+      {saved.length === 0 ? (
+        <p className="muted">Save pages you may need later.</p>
+      ) : (
+        saved.map((item) => (
+          <article key={item.id} className="saved-card">
+            <div>
+              <span>{item.category}</span>
+              <h3>{item.title}</h3>
+              {item.notes && <p>{item.notes}</p>}
+            </div>
+            <div className="card-actions">
+              <a href={item.url} target="_blank" rel="noreferrer" title="Open official FAU page">
+                <ExternalLink size={17} />
+              </a>
+              <button title="Delete saved link" onClick={() => onDelete(item)}>
+                <Trash2 size={17} />
+              </button>
+            </div>
+          </article>
+        ))
+      )}
+    </section>
+  );
+}
+
 function Dashboard({ session, onLogout }) {
-  const [tasks, setTasks] = useState([]);
+  const [resources, setResources] = useState([]);
+  const [saved, setSaved] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-
   const token = session.token;
-  const grouped = useMemo(
-    () => ({
-      todo: tasks.filter((task) => task.status === "todo"),
-      doing: tasks.filter((task) => task.status === "doing"),
-      done: tasks.filter((task) => task.status === "done")
-    }),
-    [tasks]
-  );
-  const taskText = tasks.map((task) => `${task.title}: ${task.description} (${task.status}, ${task.priority})`).join("\n");
 
-  async function loadTasks() {
+  async function load() {
     setLoading(true);
     setError("");
     try {
-      const data = await api("/tasks", { token });
-      setTasks(data.tasks);
+      const [resourceData, savedData] = await Promise.all([api("/resources"), api("/saved", { token })]);
+      setResources(resourceData.resources);
+      setSaved(savedData.saved);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -338,38 +352,34 @@ function Dashboard({ session, onLogout }) {
     }
   }
 
-  async function addSuggestion(task) {
-    const data = await api("/tasks", {
+  async function saveResource(resource, reason) {
+    const data = await api("/saved", {
       token,
       method: "POST",
-      body: JSON.stringify(task)
+      body: JSON.stringify({
+        title: resource.title,
+        url: resource.url,
+        category: resource.category,
+        notes: reason || resource.description
+      })
     });
-    setTasks((current) => [data.task, ...current]);
+    setSaved((current) => [data.saved, ...current]);
   }
 
-  async function setStatus(task, status) {
-    const data = await api(`/tasks/${task.id}`, {
-      token,
-      method: "PUT",
-      body: JSON.stringify({ status })
-    });
-    setTasks((current) => current.map((item) => (item.id === task.id ? data.task : item)));
-  }
-
-  async function removeTask(task) {
-    await api(`/tasks/${task.id}`, { token, method: "DELETE" });
-    setTasks((current) => current.filter((item) => item.id !== task.id));
+  async function deleteSaved(item) {
+    await api(`/saved/${item.id}`, { token, method: "DELETE" });
+    setSaved((current) => current.filter((savedItem) => savedItem.id !== item.id));
   }
 
   useEffect(() => {
-    loadTasks();
+    load();
   }, []);
 
   return (
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">TaskFlow AI</p>
+          <p className="eyebrow">FAU Website Helper</p>
           <h1>Welcome, {session.user.name}</h1>
         </div>
         <button className="icon-button" title="Sign out" onClick={onLogout}>
@@ -377,46 +387,22 @@ function Dashboard({ session, onLogout }) {
         </button>
       </header>
 
-      <section className="workspace">
-        <div className="board-area">
-          <TaskForm token={token} onCreated={(task) => setTasks((current) => [task, ...current])} />
-          {error && <p className="error">{error}</p>}
-          {loading ? (
-            <div className="loading">
-              <Loader2 className="spin" size={22} />
-              Loading tasks
-            </div>
-          ) : (
-            <div className="board">
-              {Object.entries(grouped).map(([status, items]) => (
-                <section key={status} className="column">
-                  <h2>{status}</h2>
-                  {items.map((task) => (
-                    <article key={task.id} className={`task priority-${task.priority}`}>
-                      <div>
-                        <strong>{task.title}</strong>
-                        {task.description && <p>{task.description}</p>}
-                        <small>{task.dueDate || "No due date"} · {task.priority}</small>
-                      </div>
-                      <div className="task-actions">
-                        <select value={task.status} onChange={(e) => setStatus(task, e.target.value)} title="Change status">
-                          <option value="todo">Todo</option>
-                          <option value="doing">Doing</option>
-                          <option value="done">Done</option>
-                        </select>
-                        <button className="icon-button" title="Delete task" onClick={() => removeTask(task)}>
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-                </section>
-              ))}
-            </div>
-          )}
+      {error && <p className="error page-error">{error}</p>}
+
+      {loading ? (
+        <div className="loading">
+          <Loader2 className="spin" size={22} />
+          Loading FAU resources
         </div>
-        <AiPanel token={token} taskText={taskText} onAddSuggestion={addSuggestion} />
-      </section>
+      ) : (
+        <section className="workspace">
+          <div>
+            <Finder token={token} resources={resources} onSave={saveResource} />
+            <SavedList saved={saved} onDelete={deleteSaved} />
+          </div>
+          <Summarizer token={token} />
+        </section>
+      )}
     </main>
   );
 }

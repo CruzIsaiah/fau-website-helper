@@ -1,30 +1,23 @@
 {
   "info": {
-    "name": "TaskFlow AI API",
+    "name": "FAU Website Helper API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:5001/api"
+      "value": "http://localhost:5010/api"
     },
     {
       "key": "token",
       "value": ""
     },
     {
-      "key": "taskId",
+      "key": "savedId",
       "value": ""
     }
   ],
   "item": [
-    {
-      "name": "Health",
-      "request": {
-        "method": "GET",
-        "url": "{{baseUrl}}/health"
-      }
-    },
     {
       "name": "Register",
       "request": {
@@ -38,27 +31,14 @@
       }
     },
     {
-      "name": "Login",
-      "request": {
-        "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"isaiah@example.com\",\n  \"password\": \"password123\"\n}"
-        },
-        "url": "{{baseUrl}}/auth/login"
-      }
-    },
-    {
-      "name": "List Tasks",
+      "name": "Resources",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-        "url": "{{baseUrl}}/tasks"
+        "url": "{{baseUrl}}/resources"
       }
     },
     {
-      "name": "Create Task",
+      "name": "Create Saved Resource",
       "request": {
         "method": "POST",
         "header": [
@@ -67,36 +47,13 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"title\": \"Finish AI project\",\n  \"description\": \"Add docs and tests\",\n  \"priority\": \"high\",\n  \"status\": \"todo\",\n  \"dueDate\": \"2026-07-10\"\n}"
+          "raw": "{\n  \"title\": \"Registrar\",\n  \"url\": \"https://www.fau.edu/registrar/\",\n  \"category\": \"Academics\",\n  \"notes\": \"Registration and transcripts\"\n}"
         },
-        "url": "{{baseUrl}}/tasks"
+        "url": "{{baseUrl}}/saved"
       }
     },
     {
-      "name": "Update Task",
-      "request": {
-        "method": "PUT",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{token}}" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"status\": \"done\"\n}"
-        },
-        "url": "{{baseUrl}}/tasks/{{taskId}}"
-      }
-    },
-    {
-      "name": "Delete Task",
-      "request": {
-        "method": "DELETE",
-        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-        "url": "{{baseUrl}}/tasks/{{taskId}}"
-      }
-    },
-    {
-      "name": "AI Suggestions",
+      "name": "AI Find",
       "request": {
         "method": "POST",
         "header": [
@@ -105,13 +62,13 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"goal\": \"Prepare for finals while working part-time\",\n  \"context\": \"Need a realistic study plan.\"\n}"
+          "raw": "{\n  \"question\": \"Where do I pay tuition?\"\n}"
         },
-        "url": "{{baseUrl}}/ai/suggestions"
+        "url": "{{baseUrl}}/ai/find"
       }
     },
     {
-      "name": "AI Insights",
+      "name": "AI Summarize",
       "request": {
         "method": "POST",
         "header": [
@@ -120,9 +77,9 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"text\": \"I have two assignments, a quiz, and work tomorrow.\"\n}"
+          "raw": "{\n  \"title\": \"Registrar page\",\n  \"url\": \"https://www.fau.edu/registrar/\",\n  \"text\": \"Students should review deadlines, submit required forms, and contact the listed office for help.\"\n}"
         },
-        "url": "{{baseUrl}}/ai/insights"
+        "url": "{{baseUrl}}/ai/summarize"
       }
     }
   ]
