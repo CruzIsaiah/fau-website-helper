@@ -3,8 +3,8 @@
 FAU Website Helper is an AI-powered mini-project that helps students find the right FAU page and understand confusing website text.
 
 Student: Isaiah Cruz  
-Z-number: TODO  
-FAU email: TODO
+Z-number: Z23589169  
+FAU email: icruz2020@fau.edu
 
 ## Features
 
@@ -112,9 +112,9 @@ Production environment variables:
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-Live app URL: `TODO`
+Live app URL: https://th-five-bice.vercel.app
 
-Demo video: `TODO`
+Demo video: `TODO - add your 3-5 minute video link after recording`
 
 ## Documentation
 

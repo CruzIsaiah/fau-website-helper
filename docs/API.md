@@ -1,6 +1,7 @@
 # API Documentation
 
-Base URL: `http://localhost:5010/api`
+Local base URL: `http://localhost:5010/api`  
+Production base URL: `https://th-five-bice.vercel.app/api`
 
 Authenticated endpoints require:
 
@@ -106,7 +107,7 @@ Response:
     {
       "resourceId": "controller",
       "reason": "This page covers tuition billing and payments.",
-      "confidence": "high"
+      "confidence": 0.91
     }
   ]
 }
