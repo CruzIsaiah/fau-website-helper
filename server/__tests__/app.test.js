@@ -111,6 +111,19 @@ describe("ai endpoints", () => {
     expect(response.body.matches[0].resourceId).toBeTruthy();
   });
 
+  it("answers graduation questions with ranked official pages", async () => {
+    const token = await register();
+    const response = await request(app)
+      .post("/api/ai/find")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ question: "when is graduation?" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.answer).toMatch(/graduation/i);
+    expect(response.body.matches[0].resourceId).toBe("registrar");
+    expect(response.body.matches[0].confidence).toBeGreaterThan(0.8);
+  });
+
   it("returns AI page summary fields", async () => {
     const token = await register();
     const response = await request(app)

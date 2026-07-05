@@ -146,13 +146,16 @@ function Auth({ onSession }) {
 }
 
 function ResourceCard({ resource, match, onSave }) {
+  const confidence =
+    typeof match?.confidence === "number" ? match.confidence.toFixed(2) : match?.confidence;
+
   return (
     <article className="resource-card">
       <div>
         <span>{resource.category}</span>
         <h3>{resource.title}</h3>
         <p>{match?.reason || resource.description}</p>
-        {match?.confidence && <small>AI confidence: {match.confidence}</small>}
+        {confidence && <small>AI confidence: {confidence}</small>}
       </div>
       <div className="card-actions">
         <a href={resource.url} target="_blank" rel="noreferrer" title="Open official FAU page">
