@@ -38,3 +38,44 @@ export function getSupabaseAdminClient() {
     }
   });
 }
+
+function keyStatus(error) {
+  if (!error) return { valid: true };
+  if (error.message?.toLowerCase().includes("invalid api key")) {
+    return { valid: false, message: "Invalid API key" };
+  }
+  return { valid: true };
+}
+
+export async function checkSupabaseKeys() {
+  if (!isSupabaseConfigured()) {
+    return {
+      configured: false,
+      anonKeyValid: false,
+      serviceRoleKeyValid: false
+    };
+  }
+
+  const auth = getSupabaseAuthClient();
+  const admin = getSupabaseAdminClient();
+
+  const [{ error: anonError }, { error: serviceError }] = await Promise.all([
+    auth.auth.signInWithPassword({
+      email: "supabase-key-check@example.com",
+      password: "not-a-real-password"
+    }),
+    admin.auth.admin.listUsers({ page: 1, perPage: 1 })
+  ]);
+
+  const anon = keyStatus(anonError);
+  const serviceRole = keyStatus(serviceError);
+
+  return {
+    configured: true,
+    projectRef: new URL(process.env.SUPABASE_URL).hostname.split(".")[0],
+    anonKeyValid: anon.valid,
+    serviceRoleKeyValid: serviceRole.valid,
+    anonMessage: anon.message,
+    serviceRoleMessage: serviceRole.message
+  };
+}

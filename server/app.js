@@ -15,7 +15,7 @@ import {
 import { fauResources } from "./resources.js";
 import { matchFauResources, summarizeFauContent } from "./ai.js";
 import { assertAllowedFauUrl, fetchFauPageText } from "./pageReader.js";
-import { isSupabaseConfigured } from "./supabase.js";
+import { checkSupabaseKeys, isSupabaseConfigured } from "./supabase.js";
 
 dotenv.config();
 
@@ -72,11 +72,15 @@ export function createApp() {
     message: { error: "AI requests are limited. Please wait a few minutes and try again." }
   });
 
-  app.get("/api/health", (_req, res) => {
+  app.get("/api/health", async (_req, res) => {
+    const databaseConfigured = isSupabaseConfigured();
+    const supabase = process.env.SHOW_SUPABASE_HEALTH === "true" ? await checkSupabaseKeys() : undefined;
+
     res.json({
       status: "ok",
       aiConfigured: Boolean(process.env.OPENAI_API_KEY),
-      databaseConfigured: isSupabaseConfigured()
+      databaseConfigured,
+      supabase
     });
   });
 
