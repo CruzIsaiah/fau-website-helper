@@ -2,9 +2,15 @@
 
 FAU Website Helper is an AI-powered mini-project that helps students find the right FAU page and understand confusing website text.
 
+Student: Isaiah Cruz  
+Z-number: TODO  
+FAU email: TODO
+
 ## Features
 
 - Account registration and login
+- Supabase Auth with protected API routes
+- Supabase Postgres saved-link persistence
 - Curated directory of common FAU resources
 - Saved FAU links and notes with CRUD operations
 - AI resource finder for plain-English student questions
@@ -22,7 +28,7 @@ Users ask questions like:
 Where do I pay tuition?
 ```
 
-The AI matches the question to curated FAU resources and explains why each page is useful.
+The AI matches the question to curated FAU resources, reads the top official pages, and answers from the page text when the answer is available.
 
 ### Page Summarization and Sentiment
 
@@ -58,6 +64,21 @@ npm run dev
 
 Open `http://localhost:5174`.
 
+## Supabase Setup
+
+1. Create a Supabase project.
+2. Open the SQL editor.
+3. Run `docs/DATABASE_SCHEMA.sql`.
+4. Add these values to `.env` locally and Vercel in production:
+
+```bash
+SUPABASE_URL=...
+SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+Never commit Supabase keys or OpenAI keys.
+
 ## Testing
 
 ```bash
@@ -87,6 +108,9 @@ Production environment variables:
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL`
 - `CLIENT_ORIGIN`
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
 Live app URL: `TODO`
 
@@ -97,4 +121,6 @@ Demo video: `TODO`
 - Endpoint documentation: `docs/API.md`
 - Cost analysis: `docs/COST_ANALYSIS.md`
 - Demo script: `docs/DEMO_SCRIPT.md`
+- Planning notes, wireframe, architecture: `docs/PLANNING.md`
+- Supabase schema: `docs/DATABASE_SCHEMA.sql`
 - Postman collection: `docs/postman_collection.json`

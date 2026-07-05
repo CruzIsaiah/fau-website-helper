@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { fetchFauPageText } from "./pageReader.js";
 
 function getClient() {
   if (!process.env.OPENAI_API_KEY) {
@@ -151,7 +152,7 @@ export async function matchFauResources({ question, resources }) {
     user: `Student question: ${question}\n\nFAU resource directory:\n${JSON.stringify(resources)}`
   });
 
-  return {
+  const ranked = {
     answer: data.answer || fallback.answer,
     matches: (data.matches || fallback.matches)
       .map((match) => ({
@@ -159,6 +160,40 @@ export async function matchFauResources({ question, resources }) {
         confidence: Number(normalizeConfidence(match.confidence).toFixed(2))
       }))
       .sort((a, b) => b.confidence - a.confidence)
+  };
+
+  if (process.env.NODE_ENV === "test") return ranked;
+
+  const pageSources = (
+    await Promise.allSettled(
+      ranked.matches.slice(0, 3).map(async (match) => {
+        const resource = resources.find((item) => item.id === match.resourceId);
+        if (!resource) return null;
+        const page = await fetchFauPageText(resource.url);
+        return {
+          resourceId: resource.id,
+          title: page.title || resource.title,
+          url: resource.url,
+          text: page.text.slice(0, 2500)
+        };
+      })
+    )
+  )
+    .filter((result) => result.status === "fulfilled" && result.value)
+    .map((result) => result.value);
+
+  if (pageSources.length === 0) return ranked;
+
+  const answerData = await createJsonResponse({
+    fallback: { answer: ranked.answer },
+    system:
+      "Answer FAU student questions using only the provided official FAU page excerpts. Return only JSON with an answer field. If the exact answer is present, give the exact date, deadline, office, requirement, or next step. If excerpts do not contain the exact answer, say what page to open and what detail to look for. Keep the answer to 1-3 sentences.",
+    user: `Student question: ${question}\n\nOfficial FAU page excerpts:\n${JSON.stringify(pageSources)}`
+  });
+
+  return {
+    ...ranked,
+    answer: answerData.answer || ranked.answer
   };
 }
 

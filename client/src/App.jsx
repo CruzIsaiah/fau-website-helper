@@ -4,7 +4,6 @@ import { createRoot } from "react-dom/client";
 import "./styles.css";
 
 const API = "/api";
-const ACCOUNT_CACHE_KEY = "fau-helper-demo-accounts";
 
 function useStoredSession() {
   const [session, setSession] = useState(() => {
@@ -37,33 +36,6 @@ async function api(path, { token, ...options } = {}) {
   return data;
 }
 
-async function hashPasswordForBrowser(password) {
-  const bytes = new TextEncoder().encode(password);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-function readAccountCache() {
-  const raw = localStorage.getItem(ACCOUNT_CACHE_KEY);
-  return raw ? JSON.parse(raw) : {};
-}
-
-async function cacheBrowserAccount(email, password, session) {
-  const accounts = readAccountCache();
-  accounts[email.toLowerCase()] = {
-    passwordHash: await hashPasswordForBrowser(password),
-    session
-  };
-  localStorage.setItem(ACCOUNT_CACHE_KEY, JSON.stringify(accounts));
-}
-
-async function restoreBrowserAccount(email, password) {
-  const account = readAccountCache()[email.toLowerCase()];
-  if (!account) return null;
-  const passwordHash = await hashPasswordForBrowser(password);
-  return account.passwordHash === passwordHash ? account.session : null;
-}
-
 function Auth({ onSession }) {
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -80,16 +52,8 @@ function Auth({ onSession }) {
         method: "POST",
         body: JSON.stringify(form)
       });
-      await cacheBrowserAccount(form.email, form.password, data);
       onSession(data);
     } catch (err) {
-      if (mode === "login") {
-        const cached = await restoreBrowserAccount(form.email, form.password);
-        if (cached) {
-          onSession(cached);
-          return;
-        }
-      }
       setError(err.message);
     } finally {
       setLoading(false);

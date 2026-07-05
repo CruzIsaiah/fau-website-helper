@@ -101,7 +101,7 @@ Response:
 
 ```json
 {
-  "answer": "These FAU resources are the best starting points.",
+  "answer": "Tuition payment details are listed on the Tuition and Billing page.",
   "matches": [
     {
       "resourceId": "controller",

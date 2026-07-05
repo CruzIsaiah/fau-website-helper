@@ -5,18 +5,17 @@ import rateLimit from "express-rate-limit";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
-import { requireAuth, hashPassword, signToken, verifyPassword } from "./auth.js";
+import { loginUser, registerUser, requireAuth } from "./auth.js";
 import {
   createSavedResource,
-  createUser,
   deleteSavedResource,
-  findUserByEmail,
   listSavedResources,
-  publicUser,
   updateSavedResource
 } from "./db.js";
 import { fauResources } from "./resources.js";
 import { matchFauResources, summarizeFauContent } from "./ai.js";
+import { assertAllowedFauUrl, fetchFauPageText } from "./pageReader.js";
+import { isSupabaseConfigured } from "./supabase.js";
 
 dotenv.config();
 
@@ -59,91 +58,6 @@ function validate(schema, body) {
   return result.data;
 }
 
-function assertAllowedFauUrl(url) {
-  const parsed = new URL(url);
-  const hostname = parsed.hostname.toLowerCase();
-  if (parsed.protocol !== "https:" || (!hostname.endsWith("fau.edu") && hostname !== "fau.edu")) {
-    const error = new Error("Please enter a public FAU HTTPS page.");
-    error.status = 400;
-    throw error;
-  }
-  return parsed.toString();
-}
-
-function htmlToReadableText(html) {
-  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]
-    ?.replace(/\s+/g, " ")
-    .trim();
-  const text = html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
-    .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return { title, text: text.slice(0, 6000) };
-}
-
-async function fetchFauPageText(url) {
-  if (process.env.NODE_ENV === "test") {
-    return {
-      title: "FAU test page",
-      text: "This FAU page includes important deadlines, official forms, contact information, and next steps for students."
-    };
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-
-  try {
-    const response = await fetch(assertAllowedFauUrl(url), {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "FAU-Website-Helper/1.0"
-      }
-    });
-
-    if (!response.ok) {
-      const error = new Error("I could not open that FAU page. Try another public FAU link or paste the page text.");
-      error.status = 400;
-      throw error;
-    }
-
-    const contentType = response.headers.get("content-type") || "";
-    if (!contentType.includes("text/html")) {
-      const error = new Error("That link does not look like a readable web page. Try another FAU page or paste the text.");
-      error.status = 400;
-      throw error;
-    }
-
-    const html = await response.text();
-    const page = htmlToReadableText(html);
-    if (page.text.length < 80) {
-      const error = new Error("I could not find enough readable text on that page. Paste the page text instead.");
-      error.status = 400;
-      throw error;
-    }
-    return page;
-  } catch (error) {
-    if (error.name === "AbortError") {
-      const timeoutError = new Error("That FAU page took too long to load. Try again or paste the page text.");
-      timeoutError.status = 408;
-      throw timeoutError;
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 export function createApp() {
   const app = express();
 
@@ -159,21 +73,17 @@ export function createApp() {
   });
 
   app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok", aiConfigured: Boolean(process.env.OPENAI_API_KEY) });
+    res.json({
+      status: "ok",
+      aiConfigured: Boolean(process.env.OPENAI_API_KEY),
+      databaseConfigured: isSupabaseConfigured()
+    });
   });
 
   app.post("/api/auth/register", async (req, res, next) => {
     try {
       const data = validate(registerSchema, req.body);
-      if (findUserByEmail(data.email)) {
-        return res.status(409).json({ error: "An account already exists for that email." });
-      }
-      const user = createUser({
-        name: data.name.trim(),
-        email: data.email.toLowerCase(),
-        passwordHash: await hashPassword(data.password)
-      });
-      res.status(201).json({ user: publicUser(user), token: signToken(user) });
+      res.status(201).json(await registerUser(data));
     } catch (error) {
       next(error);
     }
@@ -182,11 +92,7 @@ export function createApp() {
   app.post("/api/auth/login", async (req, res, next) => {
     try {
       const data = validate(authSchema, req.body);
-      const user = findUserByEmail(data.email);
-      if (!user || !(await verifyPassword(data.password, user.passwordHash))) {
-        return res.status(401).json({ error: "Email or password is incorrect." });
-      }
-      res.json({ user: publicUser(user), token: signToken(user) });
+      res.json(await loginUser(data));
     } catch (error) {
       next(error);
     }
@@ -196,22 +102,26 @@ export function createApp() {
     res.json({ resources: fauResources });
   });
 
-  app.get("/api/saved", requireAuth, (req, res) => {
-    res.json({ saved: listSavedResources(req.user.id) });
+  app.get("/api/saved", requireAuth, async (req, res, next) => {
+    try {
+      res.json({ saved: await listSavedResources(req.user.id) });
+    } catch (error) {
+      next(error);
+    }
   });
 
-  app.post("/api/saved", requireAuth, (req, res, next) => {
+  app.post("/api/saved", requireAuth, async (req, res, next) => {
     try {
-      const saved = createSavedResource(req.user.id, validate(savedResourceSchema, req.body));
+      const saved = await createSavedResource(req.user.id, validate(savedResourceSchema, req.body));
       res.status(201).json({ saved });
     } catch (error) {
       next(error);
     }
   });
 
-  app.put("/api/saved/:id", requireAuth, (req, res, next) => {
+  app.put("/api/saved/:id", requireAuth, async (req, res, next) => {
     try {
-      const saved = updateSavedResource(req.user.id, req.params.id, validate(savedResourceSchema.partial(), req.body));
+      const saved = await updateSavedResource(req.user.id, req.params.id, validate(savedResourceSchema.partial(), req.body));
       if (!saved) return res.status(404).json({ error: "Saved resource not found." });
       res.json({ saved });
     } catch (error) {
@@ -219,11 +129,15 @@ export function createApp() {
     }
   });
 
-  app.delete("/api/saved/:id", requireAuth, (req, res) => {
-    if (!deleteSavedResource(req.user.id, req.params.id)) {
-      return res.status(404).json({ error: "Saved resource not found." });
+  app.delete("/api/saved/:id", requireAuth, async (req, res, next) => {
+    try {
+      if (!(await deleteSavedResource(req.user.id, req.params.id))) {
+        return res.status(404).json({ error: "Saved resource not found." });
+      }
+      res.status(204).end();
+    } catch (error) {
+      next(error);
     }
-    res.status(204).end();
   });
 
   app.post("/api/ai/find", requireAuth, aiLimiter, async (req, res, next) => {

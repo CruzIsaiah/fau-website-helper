@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "AI-powered FAU website navigation helper.",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "nodemon server/index.js",
@@ -12,6 +15,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
     "@vitejs/plugin-react": "^4.3.4",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",

@@ -1,4 +1,5 @@
 import { v4 as uuid } from "uuid";
+import { getSupabaseAdminClient, shouldUseSupabase } from "./supabase.js";
 
 const users = new Map();
 const savedResources = new Map();
@@ -28,13 +29,54 @@ export function publicUser(user) {
   };
 }
 
-export function listSavedResources(userId) {
+function toSavedResource(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    url: row.url,
+    notes: row.notes || "",
+    category: row.category || "General",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+export async function listSavedResources(userId) {
+  if (shouldUseSupabase()) {
+    const { data, error } = await getSupabaseAdminClient()
+      .from("saved_resources")
+      .select("*")
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false });
+
+    if (error) throw error;
+    return data.map(toSavedResource);
+  }
+
   return [...savedResources.values()]
     .filter((item) => item.userId === userId)
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 }
 
-export function createSavedResource(userId, resource) {
+export async function createSavedResource(userId, resource) {
+  if (shouldUseSupabase()) {
+    const { data, error } = await getSupabaseAdminClient()
+      .from("saved_resources")
+      .insert({
+        user_id: userId,
+        title: resource.title,
+        url: resource.url,
+        notes: resource.notes || "",
+        category: resource.category || "General"
+      })
+      .select("*")
+      .single();
+
+    if (error) throw error;
+    return toSavedResource(data);
+  }
+
   const now = new Date().toISOString();
   const record = {
     id: uuid(),
@@ -50,7 +92,26 @@ export function createSavedResource(userId, resource) {
   return record;
 }
 
-export function updateSavedResource(userId, id, updates) {
+export async function updateSavedResource(userId, id, updates) {
+  if (shouldUseSupabase()) {
+    const payload = {};
+    for (const key of ["title", "url", "notes", "category"]) {
+      if (updates[key] !== undefined) payload[key] = updates[key];
+    }
+    payload.updated_at = new Date().toISOString();
+
+    const { data, error } = await getSupabaseAdminClient()
+      .from("saved_resources")
+      .update(payload)
+      .eq("id", id)
+      .eq("user_id", userId)
+      .select("*")
+      .maybeSingle();
+
+    if (error) throw error;
+    return data ? toSavedResource(data) : null;
+  }
+
   const record = savedResources.get(id);
   if (!record || record.userId !== userId) return null;
   const next = {
@@ -64,7 +125,20 @@ export function updateSavedResource(userId, id, updates) {
   return next;
 }
 
-export function deleteSavedResource(userId, id) {
+export async function deleteSavedResource(userId, id) {
+  if (shouldUseSupabase()) {
+    const { data, error } = await getSupabaseAdminClient()
+      .from("saved_resources")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId)
+      .select("id")
+      .maybeSingle();
+
+    if (error) throw error;
+    return Boolean(data);
+  }
+
   const record = savedResources.get(id);
   if (!record || record.userId !== userId) return false;
   return savedResources.delete(id);
