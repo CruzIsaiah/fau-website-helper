@@ -99,6 +99,31 @@ The API can also be tested with Postman, Thunder Client, or the included collect
 
 ## Deployment
 
+### Vercel
+
+The repo includes `api/index.js` and `vercel.json` so Vercel can serve the React frontend and Express API together.
+
+Build command:
+
+```bash
+npm run build
+```
+
+Output directory:
+
+```bash
+dist
+```
+
+Environment variables:
+
+- `JWT_SECRET`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
+- `CLIENT_ORIGIN`
+
+### Generic Node Host
+
 Build and start:
 
 ```bash
