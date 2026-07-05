@@ -138,7 +138,7 @@ Set these production environment variables on the host:
 - `OPENAI_MODEL`
 - `CLIENT_ORIGIN`
 
-Live app URL: `TODO: add deployed URL`
+Live app URL: https://th-five-bice.vercel.app
 
 Demo video: `TODO: add 3-5 minute demo video link`
 
