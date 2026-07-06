@@ -29,6 +29,8 @@ Where do I pay tuition?
 ```
 
 The AI matches the question to curated FAU resources, reads the top official pages, and answers from the page text when the answer is available.
+For process questions, such as `how to register for classes`, it gives short step-by-step guidance and links students to the right FAU pages, such as MyFAU, Registrar, and the Academic Calendar.
+For date questions, such as `when is summer graduation`, it prioritizes the Academic Calendar.
 
 ### Page Summarization and Sentiment
 

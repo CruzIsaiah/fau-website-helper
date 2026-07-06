@@ -8,6 +8,14 @@ export const fauResources = [
     keywords: ["register", "transcript", "withdraw", "drop", "graduation", "records", "forms"]
   },
   {
+    id: "myfau",
+    title: "MyFAU",
+    category: "Student Portal",
+    url: "https://myfau.fau.edu/",
+    description: "FAU student portal for registration, class schedules, account services, email, and student tools.",
+    keywords: ["myfau", "portal", "register for classes", "class registration", "student portal", "schedule"]
+  },
+  {
     id: "academic-calendar",
     title: "Academic Calendar",
     category: "Academics",

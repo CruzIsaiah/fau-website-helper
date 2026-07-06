@@ -47,19 +47,36 @@ async function createJsonResponse({ system, user, fallback }) {
 
 const topicHints = [
   {
+    terms: ["register for classes", "register for class", "sign up for classes", "enroll in classes", "enroll in a class", "class registration", "course registration"],
+    answer:
+      "To register for classes: 1. Log in to MyFAU. 2. Open the student registration area and choose register for classes. 3. Select the term, search for classes, add them to your schedule, and submit. Check the Academic Calendar for registration, add/drop, and deadline dates.",
+    boosts: {
+      myfau: 0.54,
+      registrar: 0.42,
+      "academic-calendar": 0.34,
+      advising: 0.18
+    },
+    reasons: {
+      myfau: "MyFAU is the student portal where students access registration and schedule tools.",
+      registrar: "The Registrar is the official office for registration rules, records, forms, and enrollment help.",
+      "academic-calendar": "The Academic Calendar confirms registration windows, add/drop deadlines, and term dates.",
+      advising: "Advising can help students choose the right classes before registering."
+    }
+  },
+  {
     terms: ["graduation", "graduate", "commencement", "ceremony", "cap and gown", "diploma"],
     answer:
-      "For graduation information, the best official FAU page is the Registrar. If you mean the date of a specific commencement ceremony, check the Academic Calendar as well.",
+      "For graduation requirements and records, start with the Registrar. For questions like when summer graduation or commencement happens, use the Academic Calendar because dates vary by term.",
     boosts: {
-      registrar: 0.5,
-      "academic-calendar": 0.36,
+      "academic-calendar": 0.48,
+      registrar: 0.42,
       advising: 0.12
     },
     reasons: {
       registrar:
         "The Registrar handles graduation, student records, and related forms, so it is the main official source for graduation information.",
       "academic-calendar":
-        "If the question is about when graduation ceremonies or related deadlines occur, the Academic Calendar lists important dates and term schedules.",
+        "If the question asks when summer graduation, commencement, ceremonies, or related deadlines occur, the Academic Calendar lists important dates and term schedules.",
       advising: "Academic advising can help students confirm graduation requirements and timing if they are close to finishing."
     }
   },
@@ -82,11 +99,13 @@ const topicHints = [
     terms: ["withdraw", "drop", "add class", "drop class", "registration", "transcript", "records"],
     answer: "For registration, dropping, withdrawal, transcript, or student-record questions, the Registrar is the best starting point.",
     boosts: {
+      myfau: 0.24,
       registrar: 0.5,
       "academic-calendar": 0.28,
       advising: 0.18
     },
     reasons: {
+      myfau: "MyFAU is where students access class registration and schedule tools.",
       registrar: "The Registrar is the official office for registration, withdrawal, transcripts, records, and academic forms.",
       "academic-calendar": "The Academic Calendar helps confirm add/drop and withdrawal deadlines.",
       advising: "Advising can help you decide whether a schedule change fits your degree plan."
@@ -108,6 +127,9 @@ function normalizeConfidence(value) {
 function buildFallbackMatches(question, resources) {
   const lowered = question.toLowerCase();
   const topic = topicHints.find((hint) => hint.terms.some((term) => lowered.includes(term)));
+  const asksForGraduationDate =
+    /graduation|commencement|ceremony/.test(lowered) &&
+    /when|date|calendar|summer|spring|fall|deadline/.test(lowered);
   const tokens = lowered.split(/[^a-z0-9]+/).filter(Boolean);
 
   const scored = resources
@@ -122,10 +144,11 @@ function buildFallbackMatches(question, resources) {
         .toLowerCase();
       const keywordScore = tokens.reduce((score, token) => score + (haystack.includes(token) ? 0.08 : 0), 0);
       const topicBoost = topic?.boosts?.[resource.id] || 0;
+      const calendarDateBoost = asksForGraduationDate && resource.id === "academic-calendar" ? 0.18 : 0;
       return {
         resourceId: resource.id,
         reason: topic?.reasons?.[resource.id] || `${resource.title} is a relevant official FAU resource for this question.`,
-        confidence: Number(Math.min(0.98, 0.32 + keywordScore + topicBoost).toFixed(2))
+        confidence: Number(Math.min(0.98, 0.32 + keywordScore + topicBoost + calendarDateBoost).toFixed(2))
       };
     })
     .filter((match) => match.confidence >= 0.38)
@@ -148,7 +171,7 @@ export async function matchFauResources({ question, resources }) {
   const data = await createJsonResponse({
     fallback,
     system:
-      "You help FAU students find the right official FAU page. Return only JSON with answer and matches. answer is a direct 1-2 sentence answer to the student's question. matches is an array of 3 to 5 ranked objects with resourceId, reason, and confidence fields. confidence must be a number from 0 to 1, where 1 is most confident. Use only resource IDs from the provided directory.",
+      "You help FAU students find the right official FAU page. Return only JSON with answer and matches. answer must be a direct useful answer to the student's question. When the student asks how to do a process, answer with short numbered steps. When the student asks when a term event happens, prefer the Academic Calendar and include exact dates only if found. matches is an array of 3 to 5 ranked objects with resourceId, reason, and confidence fields. confidence must be a number from 0 to 1, where 1 is most confident. Use only resource IDs from the provided directory.",
     user: `Student question: ${question}\n\nFAU resource directory:\n${JSON.stringify(resources)}`
   });
 
@@ -187,7 +210,7 @@ export async function matchFauResources({ question, resources }) {
   const answerData = await createJsonResponse({
     fallback: { answer: ranked.answer },
     system:
-      "Answer FAU student questions using only the provided official FAU page excerpts. Return only JSON with an answer field. If the exact answer is present, give the exact date, deadline, office, requirement, or next step. If excerpts do not contain the exact answer, say what page to open and what detail to look for. Keep the answer to 1-3 sentences.",
+      "Answer FAU student questions using only the provided official FAU page excerpts. Return only JSON with an answer field. If the question asks how to complete a process, give short numbered steps and include the relevant official pages to open. If the question asks when a term event happens, prioritize the Academic Calendar and give the exact date if present. If excerpts do not contain the exact answer, say what page to open and what detail to look for. Keep the answer concise but actionable.",
     user: `Student question: ${question}\n\nOfficial FAU page excerpts:\n${JSON.stringify(pageSources)}`
   });
 

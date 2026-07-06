@@ -173,8 +173,28 @@ describe("ai endpoints", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.answer).toMatch(/graduation/i);
-    expect(response.body.matches[0].resourceId).toBe("registrar");
+    expect(response.body.matches[0].resourceId).toBe("academic-calendar");
     expect(response.body.matches[0].confidence).toBeGreaterThan(0.8);
+  });
+
+  it("answers class registration questions with steps and portal links", async () => {
+    const token = await register();
+    const response = await request("POST", "/api/ai/find", { question: "how to register for classes" }, token);
+
+    expect(response.status).toBe(200);
+    expect(response.body.answer).toMatch(/1\./);
+    expect(response.body.answer).toMatch(/MyFAU/i);
+    expect(response.body.answer).toMatch(/Academic Calendar/i);
+    expect(response.body.matches[0].resourceId).toBe("myfau");
+  });
+
+  it("references the academic calendar for summer graduation dates", async () => {
+    const token = await register();
+    const response = await request("POST", "/api/ai/find", { question: "when is summer graduation?" }, token);
+
+    expect(response.status).toBe(200);
+    expect(response.body.answer).toMatch(/Academic Calendar/i);
+    expect(response.body.matches[0].resourceId).toBe("academic-calendar");
   });
 
   it("returns AI page summary fields", async () => {
