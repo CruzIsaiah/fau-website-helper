@@ -116,7 +116,7 @@ Production environment variables:
 
 Live app URL: https://th-five-bice.vercel.app
 
-Demo video: `TODO - add your 3-5 minute video link after recording`
+Demo video: https://drive.google.com/file/d/1VOMY6_-Y3Xr-JkQw8tWas5NbN7kdSmaX/view?usp=drive_link
 
 ## Documentation
 
