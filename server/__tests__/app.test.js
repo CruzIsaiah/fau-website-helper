@@ -187,6 +187,8 @@ describe("ai endpoints", () => {
     expect(response.body.answer).toMatch(/Select the term/i);
     expect(response.body.answer).toMatch(/submit/i);
     expect(response.body.answer).toMatch(/Academic Calendar/i);
+    expect(response.body.answer).toContain("https://myfau.fau.edu/");
+    expect(response.body.answer).toContain("https://www.fau.edu/registrar/registration/calendar/");
     expect(response.body.matches[0].resourceId).toBe("myfau");
   });
 
@@ -196,6 +198,7 @@ describe("ai endpoints", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.answer).toMatch(/Academic Calendar/i);
+    expect(response.body.answer).toContain("https://www.fau.edu/registrar/registration/calendar/");
     expect(response.body.matches[0].resourceId).toBe("academic-calendar");
   });
 

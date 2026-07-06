@@ -1,6 +1,9 @@
 import OpenAI from "openai";
 import { fetchFauPageText } from "./pageReader.js";
 
+const ACADEMIC_CALENDAR_URL = "https://www.fau.edu/registrar/registration/calendar/";
+const MYFAU_URL = "https://myfau.fau.edu/";
+
 function getClient() {
   if (!process.env.OPENAI_API_KEY) {
     const error = new Error("OpenAI API key is not configured.");
@@ -49,7 +52,7 @@ const topicHints = [
   {
     terms: ["register for classes", "register for class", "sign up for classes", "enroll in classes", "enroll in a class", "class registration", "course registration"],
     answer:
-      "To register for classes: 1. Log in to MyFAU. 2. Open the student registration area and choose register for classes. 3. Select the term, search for classes, add them to your schedule, and submit. Check the Academic Calendar for registration, add/drop, and deadline dates.",
+      `To register for classes: 1. Log in to MyFAU: ${MYFAU_URL} 2. Open the student registration area and choose register for classes. 3. Select the term, search for classes, add them to your schedule, and submit. 4. Check the Academic Calendar for registration, add/drop, and deadline dates: ${ACADEMIC_CALENDAR_URL}`,
     boosts: {
       myfau: 0.54,
       registrar: 0.42,
@@ -117,6 +120,16 @@ function isClassRegistrationQuestion(question) {
   return /register for classes|register for class|sign up for classes|enroll in classes|enroll in a class|class registration|course registration/i.test(question);
 }
 
+function isCalendarDateQuestion(question) {
+  return /graduation|commencement|ceremony/.test(question.toLowerCase()) &&
+    /when|date|calendar|summer|spring|fall|deadline/.test(question.toLowerCase());
+}
+
+function addAcademicCalendarLink(answer, question) {
+  if (!isCalendarDateQuestion(question) || answer.includes(ACADEMIC_CALENDAR_URL)) return answer;
+  return `${answer} Academic Calendar: ${ACADEMIC_CALENDAR_URL}`;
+}
+
 function normalizeConfidence(value) {
   if (typeof value === "number") return Math.max(0, Math.min(1, value));
   if (typeof value !== "string") return 0.5;
@@ -181,7 +194,9 @@ export async function matchFauResources({ question, resources }) {
   });
 
   const ranked = {
-    answer: shouldKeepStepAnswer ? fallback.answer : data.answer || fallback.answer,
+    answer: shouldKeepStepAnswer
+      ? fallback.answer
+      : addAcademicCalendarLink(data.answer || fallback.answer, question),
     matches: (shouldKeepStepAnswer ? fallback.matches : data.matches || fallback.matches)
       .map((match) => ({
         ...match,
@@ -221,7 +236,9 @@ export async function matchFauResources({ question, resources }) {
 
   return {
     ...ranked,
-    answer: shouldKeepStepAnswer ? ranked.answer : answerData.answer || ranked.answer
+    answer: shouldKeepStepAnswer
+      ? ranked.answer
+      : addAcademicCalendarLink(answerData.answer || ranked.answer, question)
   };
 }
 
