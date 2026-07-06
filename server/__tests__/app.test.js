@@ -184,6 +184,8 @@ describe("ai endpoints", () => {
     expect(response.status).toBe(200);
     expect(response.body.answer).toMatch(/1\./);
     expect(response.body.answer).toMatch(/MyFAU/i);
+    expect(response.body.answer).toMatch(/Select the term/i);
+    expect(response.body.answer).toMatch(/submit/i);
     expect(response.body.answer).toMatch(/Academic Calendar/i);
     expect(response.body.matches[0].resourceId).toBe("myfau");
   });

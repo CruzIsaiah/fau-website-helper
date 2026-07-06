@@ -113,6 +113,10 @@ const topicHints = [
   }
 ];
 
+function isClassRegistrationQuestion(question) {
+  return /register for classes|register for class|sign up for classes|enroll in classes|enroll in a class|class registration|course registration/i.test(question);
+}
+
 function normalizeConfidence(value) {
   if (typeof value === "number") return Math.max(0, Math.min(1, value));
   if (typeof value !== "string") return 0.5;
@@ -167,6 +171,7 @@ function buildFallbackMatches(question, resources) {
 
 export async function matchFauResources({ question, resources }) {
   const fallback = buildFallbackMatches(question, resources);
+  const shouldKeepStepAnswer = isClassRegistrationQuestion(question);
 
   const data = await createJsonResponse({
     fallback,
@@ -176,8 +181,8 @@ export async function matchFauResources({ question, resources }) {
   });
 
   const ranked = {
-    answer: data.answer || fallback.answer,
-    matches: (data.matches || fallback.matches)
+    answer: shouldKeepStepAnswer ? fallback.answer : data.answer || fallback.answer,
+    matches: (shouldKeepStepAnswer ? fallback.matches : data.matches || fallback.matches)
       .map((match) => ({
         ...match,
         confidence: Number(normalizeConfidence(match.confidence).toFixed(2))
@@ -216,7 +221,7 @@ export async function matchFauResources({ question, resources }) {
 
   return {
     ...ranked,
-    answer: answerData.answer || ranked.answer
+    answer: shouldKeepStepAnswer ? ranked.answer : answerData.answer || ranked.answer
   };
 }
 
