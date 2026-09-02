@@ -5,7 +5,7 @@ import { resetDb } from "../db.js";
 
 const app = createApp();
 
-function request(method, url, body, token) {
+function request(method, url, body) {
   return new Promise((resolve, reject) => {
     const payload = body ? JSON.stringify(body) : "";
     const req = Readable.from(payload ? [payload] : []);
@@ -14,8 +14,6 @@ function request(method, url, body, token) {
       "content-type": "application/json",
       "content-length": Buffer.byteLength(payload)
     };
-
-    if (token) headers.authorization = `Bearer ${token}`;
 
     Object.assign(req, {
       method,
@@ -75,42 +73,8 @@ function request(method, url, body, token) {
   });
 }
 
-async function register() {
-  const response = await request("POST", "/api/auth/register", {
-    name: "Isaiah Cruz",
-    email: "isaiah@example.com",
-    password: "password123"
-  });
-  return response.body.token;
-}
-
 beforeEach(() => {
   resetDb();
-});
-
-describe("auth", () => {
-  it("registers a new user", async () => {
-    const response = await request("POST", "/api/auth/register", {
-      name: "Isaiah Cruz",
-      email: "isaiah@example.com",
-      password: "password123"
-    });
-
-    expect(response.status).toBe(201);
-    expect(response.body.user.email).toBe("isaiah@example.com");
-    expect(response.body.token).toBeTruthy();
-  });
-
-  it("rejects invalid login", async () => {
-    await register();
-
-    const response = await request("POST", "/api/auth/login", {
-      email: "isaiah@example.com",
-      password: "wrong-password"
-    });
-
-    expect(response.status).toBe(401);
-  });
 });
 
 describe("resources", () => {
@@ -121,55 +85,18 @@ describe("resources", () => {
     expect(response.body.resources.length).toBeGreaterThan(5);
   });
 
-  it("protects saved resources", async () => {
-    const response = await request("GET", "/api/saved");
-
-    expect(response.status).toBe(401);
-  });
-
-  it("creates, lists, updates, and deletes a saved resource", async () => {
-    const token = await register();
-
-    const created = await request("POST", "/api/saved", {
-      title: "Registrar",
-      url: "https://www.fau.edu/registrar/",
-      category: "Academics",
-      notes: "Registration and transcripts"
-    }, token);
-
-    expect(created.status).toBe(201);
-    expect(created.body.saved.title).toBe("Registrar");
-
-    const listed = await request("GET", "/api/saved", undefined, token);
-    expect(listed.body.saved).toHaveLength(1);
-
-    const updated = await request("PUT", `/api/saved/${created.body.saved.id}`, { notes: "Updated notes" }, token);
-    expect(updated.body.saved.notes).toBe("Updated notes");
-
-    const deleted = await request("DELETE", `/api/saved/${created.body.saved.id}`, undefined, token);
-    expect(deleted.status).toBe(204);
-  });
-
-  it("rejects invalid saved resource input", async () => {
-    const token = await register();
-    const response = await request("POST", "/api/saved", { title: "x", url: "not-a-url" }, token);
-
-    expect(response.status).toBe(400);
-  });
 });
 
 describe("ai endpoints", () => {
   it("returns AI resource matches", async () => {
-    const token = await register();
-    const response = await request("POST", "/api/ai/find", { question: "Where do I pay tuition?" }, token);
+    const response = await request("POST", "/api/ai/find", { question: "Where do I pay tuition?" });
 
     expect(response.status).toBe(200);
     expect(response.body.matches[0].resourceId).toBeTruthy();
   });
 
   it("answers graduation questions with ranked official pages", async () => {
-    const token = await register();
-    const response = await request("POST", "/api/ai/find", { question: "when is graduation?" }, token);
+    const response = await request("POST", "/api/ai/find", { question: "when is graduation?" });
 
     expect(response.status).toBe(200);
     expect(response.body.answer).toMatch(/graduation/i);
@@ -178,8 +105,7 @@ describe("ai endpoints", () => {
   });
 
   it("answers class registration questions with steps and portal links", async () => {
-    const token = await register();
-    const response = await request("POST", "/api/ai/find", { question: "how to register for classes" }, token);
+    const response = await request("POST", "/api/ai/find", { question: "how to register for classes" });
 
     expect(response.status).toBe(200);
     expect(response.body.answer).toMatch(/1\./);
@@ -193,8 +119,7 @@ describe("ai endpoints", () => {
   });
 
   it("references the academic calendar for summer graduation dates", async () => {
-    const token = await register();
-    const response = await request("POST", "/api/ai/find", { question: "when is summer graduation?" }, token);
+    const response = await request("POST", "/api/ai/find", { question: "when is summer graduation?" });
 
     expect(response.status).toBe(200);
     expect(response.body.answer).toMatch(/Academic Calendar/i);
@@ -203,10 +128,9 @@ describe("ai endpoints", () => {
   });
 
   it("returns AI page summary fields", async () => {
-    const token = await register();
     const response = await request("POST", "/api/ai/summarize", {
       url: "https://www.fau.edu/registrar/"
-    }, token);
+    });
 
     expect(response.status).toBe(200);
     expect(response.body.summary).toBeTruthy();
@@ -214,8 +138,7 @@ describe("ai endpoints", () => {
   });
 
   it("rejects non-FAU summarize URLs", async () => {
-    const token = await register();
-    const response = await request("POST", "/api/ai/summarize", { url: "https://example.com/page" }, token);
+    const response = await request("POST", "/api/ai/summarize", { url: "https://example.com/page" });
 
     expect(response.status).toBe(400);
   });

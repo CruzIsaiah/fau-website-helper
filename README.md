@@ -2,21 +2,16 @@
 
 FAU Website Helper is an AI-powered mini-project that helps students find the right FAU page and understand confusing website text.
 
-Student: Isaiah Cruz  
-Z-number: Z23589169  
-FAU email: icruz2020@fau.edu
-
 ## Features
 
-- Account registration and login
-- Supabase Auth with protected API routes
-- Supabase Postgres saved-link persistence
+- No account or login required
+- Saved links persist in the user's browser
 - Curated directory of common FAU resources
 - Saved FAU links and notes with CRUD operations
 - AI resource finder for plain-English student questions
 - AI page summarizer from a public FAU link, with optional pasted text fallback
 - Loading states, validation, friendly errors, and AI rate limiting
-- Automated tests for auth, saved-resource CRUD, invalid input, unauthorized access, and AI endpoints
+- Automated tests for public resources, validation, and AI endpoints
 
 ## AI Features
 
@@ -52,7 +47,6 @@ Edit `.env`:
 
 ```bash
 PORT=5010
-JWT_SECRET=replace-with-a-long-random-secret
 OPENAI_API_KEY=sk-your-key-here
 OPENAI_MODEL=gpt-5.4-mini
 CLIENT_ORIGIN=http://localhost:5174
@@ -66,20 +60,7 @@ npm run dev
 
 Open `http://localhost:5174`.
 
-## Supabase Setup
-
-1. Create a Supabase project.
-2. Open the SQL editor.
-3. Run `docs/DATABASE_SCHEMA.sql`.
-4. Add these values to `.env` locally and Vercel in production:
-
-```bash
-SUPABASE_URL=...
-SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
-```
-
-Never commit Supabase keys or OpenAI keys.
+Supabase is optional and is not required to use the site. Never commit API keys.
 
 ## Testing
 
@@ -106,13 +87,9 @@ dist
 
 Production environment variables:
 
-- `JWT_SECRET`
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL`
 - `CLIENT_ORIGIN`
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
 
 Live app URL: https://th-five-bice.vercel.app
 

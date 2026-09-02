@@ -7,29 +7,9 @@
     {
       "key": "baseUrl",
       "value": "http://localhost:5010/api"
-    },
-    {
-      "key": "token",
-      "value": ""
-    },
-    {
-      "key": "savedId",
-      "value": ""
     }
   ],
   "item": [
-    {
-      "name": "Register",
-      "request": {
-        "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Isaiah Cruz\",\n  \"email\": \"isaiah@example.com\",\n  \"password\": \"password123\"\n}"
-        },
-        "url": "{{baseUrl}}/auth/register"
-      }
-    },
     {
       "name": "Resources",
       "request": {
@@ -38,28 +18,10 @@
       }
     },
     {
-      "name": "Create Saved Resource",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{token}}" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"title\": \"Registrar\",\n  \"url\": \"https://www.fau.edu/registrar/\",\n  \"category\": \"Academics\",\n  \"notes\": \"Registration and transcripts\"\n}"
-        },
-        "url": "{{baseUrl}}/saved"
-      }
-    },
-    {
       "name": "AI Find",
       "request": {
         "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{token}}" }
-        ],
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"question\": \"Where do I pay tuition?\"\n}"
@@ -71,10 +33,7 @@
       "name": "AI Summarize",
       "request": {
         "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{token}}" }
-        ],
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"url\": \"https://www.fau.edu/registrar/\"\n}"

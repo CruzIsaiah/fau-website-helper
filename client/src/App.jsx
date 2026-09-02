@@ -1,31 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { BookOpen, ExternalLink, Loader2, LogOut, Plus, Search, Sparkles, Trash2 } from "lucide-react";
+import { ExternalLink, Loader2, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
 const API = "/api";
 
-function useStoredSession() {
-  const [session, setSession] = useState(() => {
-    const raw = localStorage.getItem("fau-helper-session");
-    return raw ? JSON.parse(raw) : null;
-  });
-
-  function save(next) {
-    setSession(next);
-    if (next) localStorage.setItem("fau-helper-session", JSON.stringify(next));
-    else localStorage.removeItem("fau-helper-session");
-  }
-
-  return [session, save];
-}
-
-async function api(path, { token, ...options } = {}) {
+async function api(path, options = {}) {
   const response = await fetch(`${API}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers
     }
   });
@@ -34,79 +18,6 @@ async function api(path, { token, ...options } = {}) {
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || "Request failed.");
   return data;
-}
-
-function Auth({ onSession }) {
-  const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function submit(event) {
-    event.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      const data = await api(`/auth/${mode}`, {
-        method: "POST",
-        body: JSON.stringify(form)
-      });
-      onSession(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <main className="auth-shell">
-      <section className="auth-panel">
-        <div>
-          <p className="eyebrow">FAU Website Helper</p>
-          <h1>Find the FAU page you actually need.</h1>
-          <p className="lead">Ask in plain English, save important links, and turn confusing page text into clear next steps.</p>
-        </div>
-
-        <form onSubmit={submit} className="auth-form">
-          <div className="segmented">
-            <button type="button" className={mode === "login" ? "active" : ""} onClick={() => setMode("login")}>
-              Login
-            </button>
-            <button type="button" className={mode === "register" ? "active" : ""} onClick={() => setMode("register")}>
-              Register
-            </button>
-          </div>
-          {mode === "register" && (
-            <label>
-              Name
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-            </label>
-          )}
-          <label>
-            Email
-            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-          </label>
-          <label>
-            Password
-            <input
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              minLength={6}
-              required
-            />
-          </label>
-          {error && <p className="error">{error}</p>}
-          <button className="primary" disabled={loading}>
-            {loading ? <Loader2 className="spin" size={18} /> : <BookOpen size={18} />}
-            {mode === "login" ? "Sign in" : "Create account"}
-          </button>
-        </form>
-      </section>
-    </main>
-  );
 }
 
 function ResourceCard({ resource, match, onSave }) {
@@ -133,10 +44,11 @@ function ResourceCard({ resource, match, onSave }) {
   );
 }
 
-function Finder({ token, resources, onSave }) {
+function Finder({ resources, onSave }) {
   const [question, setQuestion] = useState("");
   const [matches, setMatches] = useState([]);
   const [answer, setAnswer] = useState("");
+  const [retrieved, setRetrieved] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -151,15 +63,25 @@ function Finder({ token, resources, onSave }) {
     event.preventDefault();
     setLoading(true);
     setError("");
+    setRetrieved([]);
 
     try {
       const data = await api("/ai/find", {
-        token,
         method: "POST",
         body: JSON.stringify({ question })
       });
       setAnswer(data.answer || "");
       setMatches(data.matches || []);
+      // Attempt to fetch retrieval-level sources (vector index) for richer excerpts
+      try {
+        const r = await api("/ai/retrieve", {
+          method: "POST",
+          body: JSON.stringify({ question, topK: 5 })
+        });
+        setRetrieved(r.results || []);
+      } catch (err) {
+        // ignore retrieval errors — we still show resource-level matches
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -190,6 +112,36 @@ function Finder({ token, resources, onSave }) {
 
       {answer && <p className="ai-answer">{answer}</p>}
 
+      {retrieved.length > 0 && (
+        <section className="retrieved-sources">
+          <h3>Relevant FAU Sources</h3>
+          <div className="resource-grid">
+            {retrieved.map((src) => {
+              const resource = resources.find((r) => r.id === src.resourceId || r.url === src.url);
+              const authority = resource?.authority_level || resource?.retrieval_priority || "unknown";
+              return (
+                <article key={`${src.resourceId}-${src.url}`} className="resource-card">
+                  <div>
+                    <span>{resource?.category || "FAU"} • {resource?.subcategory || ''}</span>
+                    <h3>{src.title || resource?.title || src.url}</h3>
+                    <p>{(src.text || "").slice(0, 300)}{(src.text || "").length > 300 ? '…' : ''}</p>
+                    <small>Authority: {authority}</small>
+                  </div>
+                  <div className="card-actions">
+                    <a href={src.url} target="_blank" rel="noreferrer" title="Open official FAU page">
+                      <ExternalLink size={17} />
+                    </a>
+                    <button title="Save resource" onClick={() => onSave(resource || { title: src.title || src.url, url: src.url }, resource?.description || src.text || "")}>
+                      <Plus size={17} />
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <div className="resource-grid">
         {matchedResources.map(({ resource, match }) => (
           <ResourceCard key={resource.id} resource={resource} match={match} onSave={onSave} />
@@ -199,7 +151,7 @@ function Finder({ token, resources, onSave }) {
   );
 }
 
-function Summarizer({ token }) {
+function Summarizer() {
   const [form, setForm] = useState({ url: "", text: "" });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -212,7 +164,6 @@ function Summarizer({ token }) {
 
     try {
       const data = await api("/ai/summarize", {
-        token,
         method: "POST",
         body: JSON.stringify({
           url: form.url,
@@ -301,20 +252,25 @@ function SavedList({ saved, onDelete }) {
   );
 }
 
-function Dashboard({ session, onLogout }) {
+function Dashboard() {
   const [resources, setResources] = useState([]);
-  const [saved, setSaved] = useState([]);
+  const [saved, setSaved] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("fau-helper-saved") || "[]");
+      return Array.isArray(stored) ? stored : [];
+    } catch {
+      return [];
+    }
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const token = session.token;
 
   async function load() {
     setLoading(true);
     setError("");
     try {
-      const [resourceData, savedData] = await Promise.all([api("/resources"), api("/saved", { token })]);
+      const resourceData = await api("/resources");
       setResources(resourceData.resources);
-      setSaved(savedData.saved);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -322,22 +278,20 @@ function Dashboard({ session, onLogout }) {
     }
   }
 
-  async function saveResource(resource, reason) {
-    const data = await api("/saved", {
-      token,
-      method: "POST",
-      body: JSON.stringify({
+  function saveResource(resource, reason) {
+    setSaved((current) => {
+      if (current.some((item) => item.url === resource.url)) return current;
+      return [{
+        id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`,
         title: resource.title,
         url: resource.url,
-        category: resource.category,
-        notes: reason || resource.description
-      })
+        category: resource.category || "FAU",
+        notes: reason || resource.description || ""
+      }, ...current];
     });
-    setSaved((current) => [data.saved, ...current]);
   }
 
-  async function deleteSaved(item) {
-    await api(`/saved/${item.id}`, { token, method: "DELETE" });
+  function deleteSaved(item) {
     setSaved((current) => current.filter((savedItem) => savedItem.id !== item.id));
   }
 
@@ -345,16 +299,18 @@ function Dashboard({ session, onLogout }) {
     load();
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem("fau-helper-saved", JSON.stringify(saved));
+  }, [saved]);
+
   return (
     <main className="app-shell">
       <header className="topbar">
         <div>
           <p className="eyebrow">FAU Website Helper</p>
-          <h1>Welcome, {session.user.name}</h1>
+          <h1>Find the FAU page you actually need.</h1>
         </div>
-        <button className="icon-button" title="Sign out" onClick={onLogout}>
-          <LogOut size={20} />
-        </button>
+        <p className="lead">Ask in plain English, save useful links, and turn confusing page text into clear next steps.</p>
       </header>
 
       {error && <p className="error page-error">{error}</p>}
@@ -367,10 +323,10 @@ function Dashboard({ session, onLogout }) {
       ) : (
         <section className="workspace">
           <div>
-            <Finder token={token} resources={resources} onSave={saveResource} />
+            <Finder resources={resources} onSave={saveResource} />
             <SavedList saved={saved} onDelete={deleteSaved} />
           </div>
-          <Summarizer token={token} />
+          <Summarizer />
         </section>
       )}
     </main>
@@ -378,8 +334,7 @@ function Dashboard({ session, onLogout }) {
 }
 
 function App() {
-  const [session, setSession] = useStoredSession();
-  return session ? <Dashboard session={session} onLogout={() => setSession(null)} /> : <Auth onSession={setSession} />;
+  return <Dashboard />;
 }
 
 createRoot(document.getElementById("root")).render(<App />);

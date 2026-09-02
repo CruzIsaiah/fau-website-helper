@@ -5,16 +5,10 @@ import rateLimit from "express-rate-limit";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
-import { loginUser, registerUser, requireAuth } from "./auth.js";
-import {
-  createSavedResource,
-  deleteSavedResource,
-  listSavedResources,
-  updateSavedResource
-} from "./db.js";
 import { fauResources } from "./resources.js";
 import { matchFauResources, summarizeFauContent } from "./ai.js";
 import { assertAllowedFauUrl, fetchFauPageText } from "./pageReader.js";
+import { retrieveTopChunks } from "./retrieval.js";
 import { checkSupabaseKeys, isSupabaseConfigured } from "./supabase.js";
 
 dotenv.config();
@@ -22,24 +16,9 @@ dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.resolve(__dirname, "../dist");
 
-const authSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6)
-});
-
-const registerSchema = authSchema.extend({
-  name: z.string().min(2).max(80)
-});
-
-const savedResourceSchema = z.object({
-  title: z.string().min(2).max(140),
-  url: z.string().url(),
-  notes: z.string().max(1200).optional().default(""),
-  category: z.string().max(80).optional().default("General")
-});
-
 const findSchema = z.object({
-  question: z.string().min(3).max(600)
+  question: z.string().min(3).max(600),
+  useIndex: z.boolean().optional()
 });
 
 const summarizeSchema = z.object({
@@ -84,76 +63,33 @@ export function createApp() {
     });
   });
 
-  app.post("/api/auth/register", async (req, res, next) => {
-    try {
-      const data = validate(registerSchema, req.body);
-      res.status(201).json(await registerUser(data));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.post("/api/auth/login", async (req, res, next) => {
-    try {
-      const data = validate(authSchema, req.body);
-      res.json(await loginUser(data));
-    } catch (error) {
-      next(error);
-    }
-  });
-
   app.get("/api/resources", (_req, res) => {
     res.json({ resources: fauResources });
   });
 
-  app.get("/api/saved", requireAuth, async (req, res, next) => {
-    try {
-      res.json({ saved: await listSavedResources(req.user.id) });
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.post("/api/saved", requireAuth, async (req, res, next) => {
-    try {
-      const saved = await createSavedResource(req.user.id, validate(savedResourceSchema, req.body));
-      res.status(201).json({ saved });
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.put("/api/saved/:id", requireAuth, async (req, res, next) => {
-    try {
-      const saved = await updateSavedResource(req.user.id, req.params.id, validate(savedResourceSchema.partial(), req.body));
-      if (!saved) return res.status(404).json({ error: "Saved resource not found." });
-      res.json({ saved });
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.delete("/api/saved/:id", requireAuth, async (req, res, next) => {
-    try {
-      if (!(await deleteSavedResource(req.user.id, req.params.id))) {
-        return res.status(404).json({ error: "Saved resource not found." });
-      }
-      res.status(204).end();
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.post("/api/ai/find", requireAuth, aiLimiter, async (req, res, next) => {
+  app.post("/api/ai/find", aiLimiter, async (req, res, next) => {
     try {
       const data = validate(findSchema, req.body);
-      res.json(await matchFauResources({ ...data, resources: fauResources }));
+      // allow client to opt out of vector index retrieval by passing { useIndex: false }
+      const useIndex = data.useIndex === undefined ? true : Boolean(data.useIndex);
+      res.json(await matchFauResources({ ...data, resources: fauResources, useIndex }));
     } catch (error) {
       next(error);
     }
   });
 
-  app.post("/api/ai/summarize", requireAuth, aiLimiter, async (req, res, next) => {
+  app.post("/api/ai/retrieve", aiLimiter, async (req, res, next) => {
+    try {
+      const data = validate(z.object({ question: z.string().min(3), topK: z.number().min(1).max(50).optional() }), req.body);
+      const topK = data.topK || 6;
+      const results = await retrieveTopChunks(data.question, topK);
+      res.json({ results });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/ai/summarize", aiLimiter, async (req, res, next) => {
     try {
       const data = validate(summarizeSchema, req.body);
       const safeUrl = assertAllowedFauUrl(data.url);

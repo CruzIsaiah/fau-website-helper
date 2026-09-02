@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { fetchFauPageText } from "./pageReader.js";
+import { retrieveTopChunks } from "./retrieval.js";
 
 const ACADEMIC_CALENDAR_URL = "https://www.fau.edu/registrar/registration/calendar/";
 const MYFAU_URL = "https://myfau.fau.edu/";
@@ -182,7 +183,7 @@ function buildFallbackMatches(question, resources) {
   };
 }
 
-export async function matchFauResources({ question, resources }) {
+export async function matchFauResources({ question, resources, useIndex = true }) {
   const fallback = buildFallbackMatches(question, resources);
   const shouldKeepStepAnswer = isClassRegistrationQuestion(question);
 
@@ -207,8 +208,20 @@ export async function matchFauResources({ question, resources }) {
 
   if (process.env.NODE_ENV === "test") return ranked;
 
-  const pageSources = (
-    await Promise.allSettled(
+  // Prefer vector-indexed chunks when available (fast, authority-aware). Fall back to live fetch.
+  let pageSources = [];
+  try {
+    const vecResults = useIndex ? await retrieveTopChunks(question, 6) : [];
+    if (vecResults && vecResults.length > 0) {
+      pageSources = vecResults.map((r) => ({ resourceId: r.resourceId, title: r.title || r.resourceId, url: r.url || "", text: r.text }));
+    }
+  } catch (err) {
+    // ignore retrieval errors and fall back to live fetch
+    pageSources = [];
+  }
+
+  if (pageSources.length === 0) {
+    const fetched = await Promise.allSettled(
       ranked.matches.slice(0, 3).map(async (match) => {
         const resource = resources.find((item) => item.id === match.resourceId);
         if (!resource) return null;
@@ -220,13 +233,12 @@ export async function matchFauResources({ question, resources }) {
           text: page.text.slice(0, 2500)
         };
       })
-    )
-  )
-    .filter((result) => result.status === "fulfilled" && result.value)
-    .map((result) => result.value);
+    );
 
-  if (pageSources.length === 0) return ranked;
-
+    pageSources = fetched.filter((result) => result.status === "fulfilled" && result.value).map((result) => result.value);
+    if (pageSources.length === 0) return ranked;
+  }
+  // If we already have pageSources from vector retrieval, use them. Otherwise fall back to fetching pages.
   const answerData = await createJsonResponse({
     fallback: { answer: ranked.answer },
     system:
