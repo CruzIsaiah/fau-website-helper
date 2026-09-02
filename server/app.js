@@ -6,8 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { fauResources } from "./resources.js";
-import { matchFauResources, summarizeFauContent } from "./ai.js";
-import { assertAllowedFauUrl, fetchFauPageText } from "./pageReader.js";
+import { matchFauResources, researchFauQuestion, summarizeFauContent, summarizeFauResource } from "./ai.js";
+import { assertAllowedFauUrl, fetchFauPage } from "./pageReader.js";
 import { retrieveTopChunks } from "./retrieval.js";
 import { checkSupabaseKeys, isSupabaseConfigured } from "./supabase.js";
 
@@ -21,10 +21,19 @@ const findSchema = z.object({
   useIndex: z.boolean().optional()
 });
 
+const researchSchema = findSchema.extend({ bypassCache: z.boolean().optional() });
+
 const summarizeSchema = z.object({
-  title: z.string().max(140).optional().default("FAU page"),
-  url: z.string().url(),
-  text: z.string().max(6000).optional().default("")
+  title: z.string().max(140).optional(),
+  url: z.string().trim().max(2048).optional().default(""),
+  text: z.string().trim().max(6000).optional().default("")
+}).superRefine((data, context) => {
+  if (!data.url && data.text.length < 20) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Enter a public FAU page URL or paste at least 20 characters of page text."
+    });
+  }
 });
 
 function validate(schema, body) {
@@ -72,7 +81,53 @@ export function createApp() {
       const data = validate(findSchema, req.body);
       // allow client to opt out of vector index retrieval by passing { useIndex: false }
       const useIndex = data.useIndex === undefined ? true : Boolean(data.useIndex);
-      res.json(await matchFauResources({ ...data, resources: fauResources, useIndex }));
+      res.json(await matchFauResources({ ...data, resources: fauResources, useIndex, skipPageAnswer: true }));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/ai/research", aiLimiter, async (req, res, next) => {
+    try {
+      const data = validate(researchSchema, req.body);
+      res.json(await researchFauQuestion({
+        ...data,
+        resources: fauResources,
+        bypassCache: process.env.NODE_ENV === "production" ? false : Boolean(data.bypassCache)
+      }));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/ai/summarize-resource", aiLimiter, async (req, res, next) => {
+    try {
+      const data = validate(z.object({
+        url: z.string().trim().max(2048),
+        title: z.string().trim().max(180).optional(),
+        query: z.string().trim().max(600).optional(),
+        originalQuery: z.string().trim().max(600).optional(),
+        program: z.string().trim().max(120).optional(),
+        degree: z.string().trim().max(40).optional(),
+        bypassCache: z.boolean().optional()
+      }), req.body);
+      res.json(await summarizeFauResource({
+        ...data,
+        url: assertAllowedFauUrl(data.url),
+        bypassCache: process.env.NODE_ENV === "production" ? false : Boolean(data.bypassCache)
+      }));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/pages/fetch", aiLimiter, async (req, res, next) => {
+    try {
+      const data = validate(z.object({ url: z.string().trim().max(2048), bypassCache: z.boolean().optional() }), req.body);
+      const page = await fetchFauPage(assertAllowedFauUrl(data.url), {
+        bypassCache: process.env.NODE_ENV === "production" ? false : Boolean(data.bypassCache)
+      });
+      res.json({ page });
     } catch (error) {
       next(error);
     }
@@ -92,8 +147,8 @@ export function createApp() {
   app.post("/api/ai/summarize", aiLimiter, async (req, res, next) => {
     try {
       const data = validate(summarizeSchema, req.body);
-      const safeUrl = assertAllowedFauUrl(data.url);
-      const page = data.text.trim().length >= 20 ? { title: data.title, text: data.text.trim() } : await fetchFauPageText(safeUrl);
+      const safeUrl = data.url ? assertAllowedFauUrl(data.url) : "";
+      const page = data.text.length >= 20 ? { title: data.title, text: data.text } : await fetchFauPage(safeUrl);
       res.json(await summarizeFauContent({
         title: data.title || page.title || "FAU page",
         url: safeUrl,

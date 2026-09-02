@@ -84,7 +84,6 @@ describe("resources", () => {
     expect(response.status).toBe(200);
     expect(response.body.resources.length).toBeGreaterThan(5);
   });
-
 });
 
 describe("ai endpoints", () => {
@@ -93,6 +92,39 @@ describe("ai endpoints", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.matches[0].resourceId).toBeTruthy();
+  });
+
+  it("returns a structured research response without losing ranked resources", async () => {
+    const response = await request("POST", "/api/ai/research", { question: "CS degree requirements" });
+    expect(response.status).toBe(200);
+    expect(response.body.matches[0].resourceId).toBe("computer-science-bs-requirements");
+    expect(response.body.groundedAnswer).toMatchObject({ verified: false, sections: [], tables: [] });
+    expect(response.body.retrievalStatus).toBe("insufficient_content");
+  });
+
+  it("exposes structured parsed FAU content but never raw HTML", async () => {
+    const response = await request("POST", "/api/pages/fetch", { url: "https://www.fau.edu/registrar/" });
+    expect(response.status).toBe(200);
+    expect(response.body.page.sections).toEqual(expect.any(Array));
+    expect(response.body.page.text).toMatch(/important deadlines/i);
+    expect(response.body.page.html).toBeUndefined();
+  });
+
+  it("summarizes a selected result URL without requiring copy and paste", async () => {
+    const response = await request("POST", "/api/ai/summarize-resource", {
+      url: "https://www.fau.edu/registrar/",
+      title: "Registrar",
+      query: "official transcript"
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.groundedAnswer).toEqual(expect.objectContaining({ verified: expect.any(Boolean), title: expect.any(String) }));
+    expect(response.body.sources[0].url).toBe("https://www.fau.edu/registrar/");
+  });
+
+  it("rejects unsafe page-fetch destinations", async () => {
+    const response = await request("POST", "/api/pages/fetch", { url: "http://127.0.0.1/private" });
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("invalid_fau_url");
   });
 
   it("answers graduation questions with ranked official pages", async () => {
@@ -127,6 +159,21 @@ describe("ai endpoints", () => {
     expect(response.body.matches[0].resourceId).toBe("academic-calendar");
   });
 
+  it("understands common schedule-change synonyms", async () => {
+    const response = await request("POST", "/api/ai/find", { question: "I need to leave a course" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.matches[0].resourceId).toBe("registration-faqs");
+  });
+
+  it("returns an intentional no-match state instead of random resources", async () => {
+    const response = await request("POST", "/api/ai/find", { question: "purple elephant orchestra" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.matches).toEqual([]);
+    expect(response.body.answer).toMatch(/could not find a strong match/i);
+  });
+
   it("returns AI page summary fields", async () => {
     const response = await request("POST", "/api/ai/summarize", {
       url: "https://www.fau.edu/registrar/"
@@ -141,5 +188,28 @@ describe("ai endpoints", () => {
     const response = await request("POST", "/api/ai/summarize", { url: "https://example.com/page" });
 
     expect(response.status).toBe(400);
+  });
+
+  it("rejects malformed summarize URLs as user input errors", async () => {
+    const response = await request("POST", "/api/ai/summarize", { url: "not a URL" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toMatch(/valid public FAU|public FAU/i);
+  });
+
+  it("summarizes pasted page text without requiring a URL", async () => {
+    const response = await request("POST", "/api/ai/summarize", {
+      text: "Students should submit the form before the listed deadline. Contact the Registrar with questions. Keep a copy of the confirmation."
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.summary).toMatch(/submit the form/i);
+  });
+
+  it("requires either a URL or enough pasted text", async () => {
+    const response = await request("POST", "/api/ai/summarize", { text: "too short" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toMatch(/at least 20/i);
   });
 });

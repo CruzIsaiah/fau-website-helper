@@ -2,7 +2,7 @@ function splitIntoSentences(text) {
   // Very small sentence splitter — keeps punctuation with sentence
   return text
     .replace(/\n+/g, "\n")
-    .split(/(?<=[.!?])\s+(?=[A-Z0-9\"'“‘])/)
+    .split(/(?<=[.!?])\s+(?=[A-Z0-9"'“‘])/)
     .map((s) => s.trim())
     .filter(Boolean);
 }

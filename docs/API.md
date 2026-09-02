@@ -25,6 +25,14 @@ Request:
 }
 ```
 
+### POST `/ai/research`
+
+Accepts the same search question, fetches the strongest FAU pages, ranks relevant sections and links, and returns a structured `groundedAnswer`, `sources`, and `usefulLinks` response.
+
+### POST `/ai/summarize-resource`
+
+Accepts an FAU resource `url`, its `title`, and the current search `query`. It uses the shared secure page parser to create a query-aware sourced summary for a selected result.
+
 Response:
 
 ```json
@@ -50,7 +58,7 @@ Request:
 }
 ```
 
-Optional `text` may be included if the page cannot be read automatically.
+The request may include a public FAU HTTPS `url`, at least 20 characters of pasted `text`, or both. Pasted text is used directly when provided and is the fallback when a page cannot be read automatically.
 
 Response:
 
@@ -66,6 +74,10 @@ Response:
 ### POST `/ai/retrieve`
 
 Returns matching indexed FAU source excerpts when a local vector index is available. Otherwise, `results` is an empty array.
+
+### POST `/pages/fetch`
+
+Fetches and parses an allowed FAU HTTPS page into semantic sections, tables, and contextual links. Raw remote HTML is never returned.
 
 ## Common Errors
 

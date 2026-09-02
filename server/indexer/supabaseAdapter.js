@@ -12,9 +12,9 @@ export async function upsertEmbeddingRow(tableName = "fau_embeddings", row) {
   return data;
 }
 
-export async function querySimilar(tableName = "fau_embeddings", embedding, topK = 5) {
+export async function querySimilar(_tableName = "fau_embeddings", _embedding, _topK = 5) {
   if (!isSupabaseConfigured()) throw new Error("Supabase not configured for vector query.");
-  const client = getSupabaseAdminClient();
+  getSupabaseAdminClient();
   // Scaffold: actual vector similarity depends on DB functions available.
   throw new Error("Supabase adapter querySimilar not implemented — adapt to your Supabase vector schema.");
 }

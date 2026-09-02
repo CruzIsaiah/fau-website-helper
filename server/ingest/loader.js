@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fetchFauPageText, htmlToReadableText } from "../pageReader.js";
+import { fileURLToPath } from "node:url";
+import { fetchFauPageText } from "../pageReader.js";
 import { fauResources } from "../resources.js";
 import { chunkText } from "./chunker.js";
 
@@ -73,17 +74,13 @@ export async function runIngestion({ resources = fauResources, maxChars = 1000, 
   return { chunks, report, chunksPath, reportPath };
 }
 
-if (process.argv[1].endsWith("/loader.js") || process.argv[1].endsWith("\\\") && process.argv[1].endsWith("loader.js")) {
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   // Allow `node server/ingest/loader.js` to run ingestion
   runIngestion().then(({ report, chunksPath, reportPath }) => {
-    // eslint-disable-next-line no-console
     console.log("Ingestion complete:", report);
-    // eslint-disable-next-line no-console
     console.log("Chunks written to:", chunksPath);
-    // eslint-disable-next-line no-console
     console.log("Report written to:", reportPath);
   }).catch((err) => {
-    // eslint-disable-next-line no-console
     console.error("Ingestion failed:", err);
     process.exit(1);
   });

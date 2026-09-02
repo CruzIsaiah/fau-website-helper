@@ -8,7 +8,7 @@ const CHUNKS_PATH = path.resolve(process.cwd(), "outputs/ingest/chunks.json");
 const OUT_INDEX = path.resolve(process.cwd(), "outputs/index/vector_store.json");
 
 async function buildIndex({ fromIngest = false } = {}) {
-  let chunks = [];
+  let chunks;
   if (fromIngest) {
     const result = await runIngestion();
     chunks = result.chunks;
