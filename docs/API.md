@@ -1,7 +1,7 @@
 # API Documentation
 
 Local base URL: `http://localhost:5010/api`  
-Production base URL: `https://th-five-bice.vercel.app/api`
+Production base URL: `https://fau-helper.vercel.app/api`
 
 No account or authorization header is required.
 

@@ -91,7 +91,7 @@ Production environment variables:
 - `OPENAI_MODEL`
 - `CLIENT_ORIGIN`
 
-Live app URL: https://th-five-bice.vercel.app
+Live app URL: https://fau-helper.vercel.app
 
 Demo video: https://drive.google.com/file/d/1VOMY6_-Y3Xr-JkQw8tWas5NbN7kdSmaX/view?usp=drive_link
 
