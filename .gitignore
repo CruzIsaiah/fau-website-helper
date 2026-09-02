@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.DS_Store
+coverage
+npm-debug.log*
+.vercel
+work
+outputs
+fau-helper

@@ -1,0 +1,45 @@
+{
+  "info": {
+    "name": "FAU Website Helper API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5010/api"
+    }
+  ],
+  "item": [
+    {
+      "name": "Resources",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/resources"
+      }
+    },
+    {
+      "name": "AI Find",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"Where do I pay tuition?\"\n}"
+        },
+        "url": "{{baseUrl}}/ai/find"
+      }
+    },
+    {
+      "name": "AI Summarize",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"https://www.fau.edu/registrar/\"\n}"
+        },
+        "url": "{{baseUrl}}/ai/summarize"
+      }
+    }
+  ]
+}
