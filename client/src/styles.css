@@ -33,7 +33,7 @@ h1, h2, h3, h4, p { margin-top: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .app-header {
-  position: sticky; z-index: 50; top: 0; display: flex; align-items: center; justify-content: space-between;
+  position: sticky; z-index: 50; top: 0; display: flex; align-items: center; justify-content: flex-start; gap: 10px;
   min-height: 66px; padding: 8px 24px; border-bottom: 1px solid var(--border); background: rgba(255, 255, 255, 0.97);
 }
 .brand { display: inline-flex; align-items: center; gap: 11px; color: var(--navy-dark); text-decoration: none; }
@@ -41,10 +41,6 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .brand > span:last-child { display: grid; gap: 1px; }
 .brand strong { font-size: 1rem; line-height: 1.15; letter-spacing: -0.015em; }
 .brand small { color: var(--muted); font-size: 0.72rem; }
-.app-header nav { display: flex; align-items: center; gap: 5px; }
-.app-header nav a, .app-header nav button { display: inline-flex; align-items: center; gap: 5px; min-height: 39px; padding: 0 11px; border-radius: 7px; background: transparent; color: #17284c; font-size: 0.84rem; font-weight: 750; text-decoration: none; transition: background var(--transition), color var(--transition); }
-.app-header nav a:hover, .app-header nav button:hover { background: var(--light-blue); color: var(--blue); }
-.saved-header-link span { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: var(--red); color: white; font-size: 0.72rem; }
 .mobile-menu { display: none; width: 38px; height: 38px; align-items: center; justify-content: center; border-radius: 8px; background: var(--light-blue); color: var(--navy); }
 
 .app-body { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: calc(100vh - 66px); }
@@ -223,7 +219,6 @@ h1, h2, h3, h4, p { margin-top: 0; }
   .app-body { grid-template-columns: 1fr; }
   .mobile-menu { display: inline-flex; }
   .app-header { justify-content: flex-start; gap: 10px; }
-  .app-header nav { margin-left: auto; }
   .sidebar { position: fixed; top: 0; left: 0; width: min(280px, calc(100vw - 42px)); height: 100vh; padding-top: 58px; box-shadow: 18px 0 45px rgba(0, 30, 61, .18); transform: translateX(-105%); transition: transform var(--transition); }
   .sidebar.is-open { transform: translateX(0); }
   .sidebar-scrim { position: fixed; z-index: 35; inset: 0; display: block; background: rgba(0, 26, 52, .38); }
@@ -231,7 +226,6 @@ h1, h2, h3, h4, p { margin-top: 0; }
 }
 
 @media (max-width: 760px) {
-  .app-header nav button { display: none; }
   .main-content { padding: 12px 14px 28px; }
   .search-hero { min-height: auto; padding: 25px 22px 20px; }
   .search-hero h1 { font-size: 1.7rem; }
@@ -249,11 +243,6 @@ h1, h2, h3, h4, p { margin-top: 0; }
   .brand small { display: none; }
   .brand strong { font-size: .85rem; }
   .brand-mark { width: 36px; height: 36px; }
-  .app-header nav { gap: 0; }
-  .app-header nav a { min-height: 36px; padding: 0 6px; font-size: .69rem; }
-  .saved-header-link { font-size: 0 !important; }
-  .saved-header-link svg { width: 15px; }
-  .saved-header-link span { min-width: 21px; height: 21px; padding: 0 6px; font-size: .65rem; }
   .search-hero { padding: 22px 16px 17px; border-radius: 9px; background-image: linear-gradient(90deg, rgba(0, 35, 75, 0.96), rgba(0, 45, 87, 0.72)), url("/images/fau-entrance-banner.webp"); background-position: 64% center; }
   .answer-content { padding: 17px 14px 15px; }
   .answer-table-desktop { display: none; }
@@ -277,7 +266,6 @@ h1, h2, h3, h4, p { margin-top: 0; }
 
 @media (max-width: 380px) {
   .brand > span:last-child { display: none; }
-  .app-header nav a { padding-inline: 5px; }
   .main-content { padding-inline: 10px; }
   .hero-suggestions > span { width: 100%; }
   .result-actions { display: grid; grid-template-columns: 1fr 1fr auto; width: 100%; }

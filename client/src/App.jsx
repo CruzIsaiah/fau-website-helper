@@ -48,7 +48,7 @@ function ResourceIcon({ resource, size = 20 }) {
   return <Icon size={size} aria-hidden="true" />;
 }
 
-function Header({ savedCount, onMenu, onComingSoon }) {
+function Header({ onMenu }) {
   return (
     <header className="app-header">
       <button className="mobile-menu" type="button" onClick={onMenu} aria-label="Open quick links"><Menu size={20} /></button>
@@ -56,13 +56,6 @@ function Header({ savedCount, onMenu, onComingSoon }) {
         <span className="brand-mark"><Compass size={22} aria-hidden="true" /></span>
         <span><strong>FAU Website Helper</strong><small>Independent FAU navigation assistant</small></span>
       </a>
-      <nav aria-label="Primary navigation">
-        <a href="https://myfau.fau.edu" target="_blank" rel="noopener noreferrer">MyFAU <ExternalLink size={13} /></a>
-        <a href="https://canvas.fau.edu" target="_blank" rel="noopener noreferrer">Canvas <ExternalLink size={13} /></a>
-        <button type="button" onClick={() => onComingSoon("Maps")}>Maps</button>
-        <button type="button" onClick={() => onComingSoon("Events")}>Events</button>
-        <a className="saved-header-link" href="#saved"><Bookmark size={15} /> Saved <span>{savedCount}</span></a>
-      </nav>
     </header>
   );
 }
@@ -309,7 +302,7 @@ function App() {
 
   return (
     <div className="app-shell">
-      <Header savedCount={saved.length} onMenu={() => setSidebarOpen(true)} onComingSoon={(label) => setNotice(`${label} is coming in a future update.`)} />
+      <Header onMenu={() => setSidebarOpen(true)} />
       <div className="app-body">
         <Sidebar resources={resources} pinned={pinned} open={sidebarOpen} onClose={() => setSidebarOpen(false)} onRename={renamePinned} onUnpin={updatePinned} onOpenSummarizer={() => { setSummarizerOpen(true); setSidebarOpen(false); }} />
         <main className="main-content">
