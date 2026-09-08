@@ -11,6 +11,10 @@ import { assertAllowedFauUrl, fetchFauPage } from "./pageReader.js";
 import { retrieveTopChunks } from "./retrieval.js";
 import { checkSupabaseKeys, isSupabaseConfigured } from "./supabase.js";
 
+import { parseNavigationIntent } from "./navigation/intent.js";
+import { navigate } from "./navigation/service.js";
+import { searchLocations } from "./navigation/resolver.js";
+
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -72,6 +76,17 @@ export function createApp() {
     });
   });
 
+  app.get("/api/navigation/locations", (req, res) => {
+    const q = typeof req.query.q === 'string' ? req.query.q.slice(0, 180) : '';
+    res.json({ locations: searchLocations(q).slice(0, 10).map(x => x.location) });
+  });
+  app.post("/api/navigation/route", aiLimiter, async (req, res, next) => {
+    try {
+      const data = validate(z.object({ from: z.string().max(180), to: z.string().max(180) }), req.body);
+      res.json(await navigate(data));
+    } catch (error) { next(error); }
+  });
+
   app.get("/api/resources", (_req, res) => {
     res.json({ resources: fauResources });
   });
@@ -79,6 +94,8 @@ export function createApp() {
   app.post("/api/ai/find", aiLimiter, async (req, res, next) => {
     try {
       const data = validate(findSchema, req.body);
+      const intent = parseNavigationIntent(data.question);
+      if (intent) return res.json(await navigate(intent));
       // allow client to opt out of vector index retrieval by passing { useIndex: false }
       const useIndex = data.useIndex === undefined ? true : Boolean(data.useIndex);
       res.json(await matchFauResources({ ...data, resources: fauResources, useIndex, skipPageAnswer: true }));
@@ -90,6 +107,8 @@ export function createApp() {
   app.post("/api/ai/research", aiLimiter, async (req, res, next) => {
     try {
       const data = validate(researchSchema, req.body);
+      const intent = parseNavigationIntent(data.question);
+      if (intent) return res.json(await navigate(intent));
       res.json(await researchFauQuestion({
         ...data,
         resources: fauResources,

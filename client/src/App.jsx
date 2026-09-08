@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle, BookOpen, Bookmark, CalendarDays, CheckCircle2,
   Compass, ExternalLink, FileText, GraduationCap, Link2, Loader2, MapPin, Menu, Monitor,
@@ -11,6 +11,8 @@ import {
 } from "./utils.js";
 import "./styles.css";
 
+import NavigationCard from "./navigation/NavigationCard.jsx";
+const MapPage = lazy(() => import('./navigation/MapPage.jsx'));
 const API = "/api";
 const SAVED_LINKS_KEY = "fau-helper-saved";
 const PINNED_LINKS_KEY = "fau-helper-pinned";
@@ -92,6 +94,7 @@ function Sidebar({ resources, pinned, open, onClose, onRename, onUnpin, onOpenSu
             {quickLinks.map(({ resource, label }) => (
               <a key={resource.id} href={resource.url} target="_blank" rel="noopener noreferrer"><ResourceIcon resource={resource} size={17} /><span>{label}</span></a>
             ))}
+            <a href="/map"><MapPin size={17} /><span>Campus Map</span></a>
             <button type="button" onClick={onOpenSummarizer}><FileText size={17} /><span>Page Summarizer</span></button>
           </div>
         </section>
@@ -224,6 +227,7 @@ function App() {
   const [submittedQuestion, setSubmittedQuestion] = useState("");
   const [matches, setMatches] = useState([]);
   const [answer, setAnswer] = useState(null);
+  const [navigation, setNavigation] = useState(null);
   const [sources, setSources] = useState([]);
   const [usefulLinks, setUsefulLinks] = useState([]);
   const [activeResource, setActiveResource] = useState(null);
@@ -271,9 +275,10 @@ function App() {
     setQuestion(cleanQuestion);
     if (cleanQuestion.length < 3) return setError("Ask a question using at least three characters.");
     requestController.current?.abort(); requestController.current = new AbortController();
-    setSubmittedQuestion(cleanQuestion); setMatches([]); setAnswer(null); setSources([]); setUsefulLinks([]); setActiveResource(null); setError(""); setLoading(true);
+    setNavigation(null); setSubmittedQuestion(cleanQuestion); setMatches([]); setAnswer(null); setSources([]); setUsefulLinks([]); setActiveResource(null); setError(""); setLoading(true);
     try {
       const found = await api("/ai/find", { method: "POST", signal: requestController.current.signal, body: JSON.stringify({ question: cleanQuestion }) });
+      if (found.kind === 'navigation') { setNavigation(found); return; }
       const nextMatches = Array.isArray(found.matches) ? found.matches : [];
       setMatches(nextMatches); setLoading(false); setAnswerLoading(nextMatches.length > 0);
       const top = resources.find((resource) => resource.id === nextMatches[0]?.resourceId);
@@ -284,6 +289,13 @@ function App() {
     } catch (requestError) {
       if (requestError.name !== "AbortError") setError(requestError.message);
     } finally { setLoading(false); setAnswerLoading(false); }
+  }
+
+  async function chooseNavigation(field, id) {
+    setLoading(true); setError('');
+    try {
+      setNavigation(await api('/navigation/route', { method: 'POST', body: JSON.stringify({ from: field === 'from' ? id : navigation.originResult.location?.id || navigation.from, to: field === 'to' ? id : navigation.destinationResult.location?.id || navigation.to }) }));
+    } catch (e) { setError(e.message); } finally { setLoading(false); }
   }
 
   async function summarizeResource(resource) {
@@ -308,7 +320,8 @@ function App() {
         <main className="main-content">
           <SearchHero question={question} setQuestion={setQuestion} onSearch={runSearch} loading={loading} />
           {error && <div className="page-error" role="alert"><AlertCircle size={17} />{error}</div>}
-          <div className="search-workspace">
+          <div aria-live="polite">{navigation && <NavigationCard result={navigation} onChoose={chooseNavigation} />}</div>
+          {!navigation && <div className="search-workspace">
             <section className="results-column" aria-busy={loading}>
               <div className="results-heading"><div><h2>{submittedQuestion ? <>Results for “{submittedQuestion}”</> : "Popular FAU resources"}</h2><p>{loading ? "Searching current FAU resources..." : `${displayedResults.length} ${displayedResults.length === 1 ? "result" : "results"}`}</p></div></div>
               {loading && displayedResults.length === 0 ? <div className="result-list">{[1, 2, 3, 4].map((item) => <div className="result-skeleton" key={item} />)}</div> : displayedResults.length > 0 ? (
@@ -317,6 +330,7 @@ function App() {
             </section>
             <AnswerPanel answer={answer} sources={sources} usefulLinks={usefulLinks} activeResource={activeResource} loading={answerLoading} saved={activeResource ? savedUrls.has(activeResource.url) : false} pinned={activeResource ? pinnedUrls.has(activeResource.url) : false} onSave={updateSaved} onPin={updatePinned} />
           </div>
+          }
           <SavedSection saved={saved} onRemove={updateSaved} onPin={updatePinned} pinnedUrls={pinnedUrls} />
         </main>
       </div>
@@ -326,4 +340,4 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(window.location.pathname === "/map" ? <Suspense fallback={<p>Loading campus map…</p>}><MapPage /></Suspense> : <App />);

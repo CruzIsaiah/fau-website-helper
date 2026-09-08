@@ -213,3 +213,32 @@ describe("ai endpoints", () => {
     expect(response.body.error).toMatch(/at least 20/i);
   });
 });
+
+describe('navigation API dispatch', () => {
+  it('routes assistant navigation before retrieval', async () => {
+    const response = await request('POST', '/api/ai/find', { question: 'Take me from engineering to Starbucks' });
+    expect(response.status).toBe(200);
+    expect(response.body.kind).toBe('navigation');
+    expect(response.body.status).toBe('needs_locations');
+    expect(response.body.originResult.status).toBe('ambiguous');
+    expect(response.body.destinationResult.location.name).toBe('Starbucks');
+    expect(response.body.matches).toBeUndefined();
+  });
+  it('also separates navigation from direct research calls', async () => {
+    const response = await request('POST', '/api/ai/research', { question: 'How do I get to the gym?' });
+    expect(response.status).toBe(200);
+    expect(response.body.kind).toBe('navigation');
+    expect(response.body.status).toBe('needs_locations');
+  });
+  it('offers official names for aliases', async () => {
+    const response = await request('GET', '/api/navigation/locations?q=gym');
+    expect(response.status).toBe(200);
+    expect(response.body.locations[0].name).toBe('Recreation and Fitness Center (RC-91)');
+  });
+  it('validates route input and handles unknown places', async () => {
+    expect((await request('POST', '/api/navigation/route', { from: 42, to: 'gym' })).status).toBe(400);
+    const response = await request('POST', '/api/navigation/route', { from: 'moon', to: 'gym' });
+    expect(response.body.status).toBe('needs_locations');
+    expect(response.body.originResult.status).toBe('unknown');
+  });
+});

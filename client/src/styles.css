@@ -275,3 +275,36 @@ h1, h2, h3, h4, p { margin-top: 0; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Campus navigation uses the existing FAU colors and card treatment. */
+.navigation-card { padding: 22px; border: 1px solid var(--border); border-top: 3px solid var(--blue); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); overflow-wrap: anywhere; }
+.navigation-card h2 { color: var(--navy); font-size: 1.15rem; line-height: 1.45; }
+.navigation-card p { line-height: 1.5; }
+.route-duration { color: var(--navy); font-weight: 700; }
+.route-directions { padding-left: 24px; display: grid; gap: 12px; line-height: 1.55; }
+.route-note, .route-attribution { color: var(--muted); font-size: .8rem; }
+.route-attribution { display: block; margin-top: 16px; }
+.route-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.route-actions a, .route-submit, .swap-route { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; background: var(--navy); color: white; border-radius: 7px; text-decoration: none; font-weight: 650; }
+.route-actions a + a { background: var(--light-blue); color: var(--navy); }
+.map-page { max-width: 1440px; margin: auto; padding: 28px; }
+.map-page h1 { color: var(--navy); }
+.route-form { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; gap: 12px; align-items: end; margin: 24px 0; }
+.location-field { position: relative; min-width: 0; }
+.location-field label { display: block; margin-bottom: 7px; font-weight: 700; color: var(--navy); }
+.location-field input { width: 100%; height: 46px; padding: 10px; border: 1px solid var(--border); border-radius: 7px; background: white; }
+.location-suggestions { position: absolute; top: 100%; left: 0; right: 0; z-index: 1100; background: white; box-shadow: var(--shadow); max-height: 320px; overflow-y: auto; }
+.location-suggestions:empty { display: none; }
+.location-suggestions button, .location-choices button { width: 100%; padding: 12px; text-align: left; background: white; color: var(--navy); border-bottom: 1px solid var(--border); min-height: 44px; }
+.location-suggestions button:hover, .location-choices button:hover { background: var(--light-blue); }
+.location-suggestions small, .location-choices small { display: block; color: var(--muted); margin-top: 4px; }
+.map-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.campus-map { height: 580px; width: 100%; border: 1px solid var(--border); border-radius: var(--radius); z-index: 1; }
+.campus-marker { display: grid; place-items: center; border: 2px solid white; border-radius: 50% 50% 50% 0; background: var(--navy); color: white; font-weight: 800; box-shadow: 0 2px 6px #0005; }
+.marker-1 { background: var(--red); }
+@media (max-width: 760px) { .map-page { padding: 20px 14px; } .route-form { grid-template-columns: minmax(0, 1fr) auto; } .location-field { grid-column: 1; } .swap-route { grid-column: 2; grid-row: 1 / 3; align-self: center; } .route-submit { grid-column: 1 / -1; } .map-layout { grid-template-columns: 1fr; } .campus-map { height: 360px; } .navigation-card { padding: 18px; } }
+.location-suggestions [aria-selected="true"] { background: var(--light-blue); outline: 2px solid var(--blue); outline-offset: -2px; }
+.campus-route-summary { color: #243558; font-size: 1rem; line-height: 1.65; margin-bottom: 16px; }
+.route-details { margin-bottom: 16px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.route-details > summary { padding: 13px 0; min-height: 44px; color: var(--navy); font-weight: 650; cursor: pointer; }
+.route-details .route-directions { margin-top: 0; }

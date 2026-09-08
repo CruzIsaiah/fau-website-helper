@@ -1,0 +1,270 @@
+[
+  {
+    "originId": "150490c0da4e74fb",
+    "destinationId": "569ddef2aea7e2d7",
+    "directions": [
+      "From College of Medicine, Charles E. Schmidt, head south for about 9 meters, then turn left",
+      "Keep right and continue toward College of Engineering and Computer Science.",
+      "Turn left for about 7 meters, then arrive near College of Engineering and Computer Science."
+    ],
+    "landmarks": [
+      {
+        "id": "569ddef2aea7e2d7",
+        "name": "College of Engineering and Computer Science (EE-96)"
+      }
+    ],
+    "evidence": [
+      {
+        "stepIndex": 2,
+        "locationId": "569ddef2aea7e2d7",
+        "relationship": "toward",
+        "distanceMeters": 19.61046809515129,
+        "wayPoints": [
+          8,
+          13
+        ]
+      },
+      {
+        "stepIndex": 4,
+        "locationId": "569ddef2aea7e2d7",
+        "relationship": "arrival",
+        "distanceMeters": 12.955366255986563,
+        "wayPoints": [
+          14,
+          14
+        ]
+      }
+    ]
+  },
+  {
+    "originId": "71f0bec7d1ddad8b",
+    "destinationId": "eb8e239349aff6f4",
+    "directions": [
+      "From Recreation and Fitness Center, head south",
+      "Turn left onto Breezeway and continue past Hillel Jewish Life Center.",
+      "Arrive near Student Services & Food Court, on your left."
+    ],
+    "landmarks": [
+      {
+        "id": "aeb3197c76f52ac7",
+        "name": "Hillel Jewish Life Center (LY-3A)"
+      }
+    ],
+    "evidence": [
+      {
+        "stepIndex": 1,
+        "locationId": "aeb3197c76f52ac7",
+        "relationship": "past",
+        "distanceMeters": 14.038167572889602,
+        "wayPoints": [
+          7,
+          24
+        ]
+      },
+      {
+        "stepIndex": 2,
+        "locationId": "eb8e239349aff6f4",
+        "relationship": "arrival_left",
+        "distanceMeters": 17.764567971086112,
+        "wayPoints": [
+          24,
+          24
+        ]
+      }
+    ]
+  },
+  {
+    "originId": "788c2994a8c2b780",
+    "destinationId": "2697b43c6ad82a36",
+    "directions": [
+      "From S. E. Wimberly Library, head south",
+      "Turn right",
+      "Turn left and continue past Live Oak Pavilion.",
+      "Turn left and continue toward Student Union.",
+      "Arrive near Student Union, on your left."
+    ],
+    "landmarks": [
+      {
+        "id": "e6b73cad875a496c",
+        "name": "Live Oak Pavilion (LO-31B)"
+      },
+      {
+        "id": "2697b43c6ad82a36",
+        "name": "Student Union (UN-31)"
+      }
+    ],
+    "evidence": [
+      {
+        "stepIndex": 2,
+        "locationId": "e6b73cad875a496c",
+        "relationship": "past",
+        "distanceMeters": 0.7788208958058966,
+        "wayPoints": [
+          13,
+          22
+        ]
+      },
+      {
+        "stepIndex": 3,
+        "locationId": "2697b43c6ad82a36",
+        "relationship": "toward",
+        "distanceMeters": 17.626841377086908,
+        "wayPoints": [
+          22,
+          24
+        ]
+      },
+      {
+        "stepIndex": 4,
+        "locationId": "2697b43c6ad82a36",
+        "relationship": "arrival_left",
+        "distanceMeters": 17.626841377086908,
+        "wayPoints": [
+          24,
+          24
+        ]
+      }
+    ]
+  },
+  {
+    "originId": "83abdb07682ccb20",
+    "destinationId": "454d20bbc54345ea",
+    "directions": [
+      "From Engineering East, head south for about 7 meters, then turn right and continue toward College of Medicine, Charles E. Schmidt.",
+      "Turn left",
+      "Turn right",
+      "Turn right",
+      "Turn right",
+      "Keep left",
+      "Turn right",
+      "Turn right",
+      "Turn right and continue toward Ritter Art Gallery.",
+      "Turn left onto Breezeway and continue toward Starbucks.",
+      "Arrive near Starbucks, on your right."
+    ],
+    "landmarks": [
+      {
+        "id": "150490c0da4e74fb",
+        "name": "College of Medicine, Charles E. Schmidt (BC-71)"
+      },
+      {
+        "id": "ba88eccc71116990",
+        "name": "Ritter Art Gallery (AG-39)"
+      },
+      {
+        "id": "454d20bbc54345ea",
+        "name": "Starbucks"
+      }
+    ],
+    "evidence": [
+      {
+        "stepIndex": 1,
+        "locationId": "150490c0da4e74fb",
+        "relationship": "toward",
+        "distanceMeters": 29.296687454764566,
+        "wayPoints": [
+          1,
+          13
+        ]
+      },
+      {
+        "stepIndex": 9,
+        "locationId": "ba88eccc71116990",
+        "relationship": "toward",
+        "distanceMeters": 36.30047608727342,
+        "wayPoints": [
+          36,
+          39
+        ]
+      },
+      {
+        "stepIndex": 10,
+        "locationId": "454d20bbc54345ea",
+        "relationship": "toward",
+        "distanceMeters": 12.168079378365954,
+        "wayPoints": [
+          39,
+          44
+        ]
+      },
+      {
+        "stepIndex": 11,
+        "locationId": "454d20bbc54345ea",
+        "relationship": "arrival_right",
+        "distanceMeters": 12.168079378365954,
+        "wayPoints": [
+          44,
+          44
+        ]
+      }
+    ]
+  },
+  {
+    "originId": "2697b43c6ad82a36",
+    "destinationId": "c5ca9e6b08b29618",
+    "directions": [
+      "From Student Union, walk toward Live Oak Pavilion.",
+      "Turn right",
+      "Turn right",
+      "Turn left and continue toward Instructional Services.",
+      "Turn right and continue toward Bookstore.",
+      "Continue straight for about 12 meters, then arrive near Bookstore, on your left."
+    ],
+    "landmarks": [
+      {
+        "id": "e6b73cad875a496c",
+        "name": "Live Oak Pavilion (LO-31B)"
+      },
+      {
+        "id": "343947bdd0a85505",
+        "name": "Instructional Services (IS-4)"
+      },
+      {
+        "id": "c5ca9e6b08b29618",
+        "name": "Bookstore (BK-76)"
+      }
+    ],
+    "evidence": [
+      {
+        "stepIndex": 0,
+        "locationId": "e6b73cad875a496c",
+        "relationship": "toward",
+        "distanceMeters": 29.304147374442994,
+        "wayPoints": [
+          0,
+          2
+        ]
+      },
+      {
+        "stepIndex": 3,
+        "locationId": "343947bdd0a85505",
+        "relationship": "toward",
+        "distanceMeters": 36.11056989063267,
+        "wayPoints": [
+          7,
+          15
+        ]
+      },
+      {
+        "stepIndex": 4,
+        "locationId": "c5ca9e6b08b29618",
+        "relationship": "toward",
+        "distanceMeters": 32.515985042442175,
+        "wayPoints": [
+          15,
+          17
+        ]
+      },
+      {
+        "stepIndex": 6,
+        "locationId": "c5ca9e6b08b29618",
+        "relationship": "arrival_left",
+        "distanceMeters": 30.51079080570761,
+        "wayPoints": [
+          18,
+          18
+        ]
+      }
+    ]
+  }
+]
