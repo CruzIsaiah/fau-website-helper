@@ -52,6 +52,7 @@ function validate(schema, body) {
 
 export function createApp() {
   const app = express();
+  app.set("trust proxy", 1);
 
   app.use(cors({ origin: process.env.CLIENT_ORIGIN || true }));
   app.use(express.json({ limit: "1mb" }));
