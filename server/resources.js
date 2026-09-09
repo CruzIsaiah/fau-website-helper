@@ -1,5 +1,12 @@
 const resources = [
   {
+    id: 'fau-directory', title: 'FAU Directory', url: 'https://directory.fau.edu/',
+    description: 'Search the official FAU faculty and staff directory.',
+    category: 'Campus services', department: 'Florida Atlantic University',
+    keywords: ['directory', 'faculty', 'staff', 'contact'], intents: ['campus_services'],
+    page_type: 'directory', authority_level: 'high'
+  },
+  {
     id: "computer-science-bs-requirements",
     title: "Computer Science B.S. Degree Requirements",
     url: "https://www.fau.edu/engineering/eecs/undergraduate/computer-science/degree-requirements-bscs/",

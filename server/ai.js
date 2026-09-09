@@ -241,6 +241,9 @@ export async function researchFauQuestion({ question, resources, useIndex = true
     answer: groundedAnswer.summary,
     groundedAnswer,
     sources: structuredSources.length ? structuredSources : ranked.sources,
+    // Keep citation numbering tied to the evidence order used to author the answer.
+    // The display source list above may put the primary page first or deduplicate it.
+    citationSources: structured.applicable ? structured.sources || [] : retrieval.chunks.map(chunk => ({ title: chunk.pageTitle, url: chunk.pageUrl })),
     usefulLinks: retrieval.usefulLinks.slice(0, 8).map(({ text, href, sectionHeading, sourcePageTitle }) => ({ text, href, sectionHeading, sourcePageTitle })),
     retrievalStatus: groundedAnswer.verified ? "verified" : retrieval.rejected.length ? "source_unavailable" : "insufficient_content",
     ...(process.env.SEARCH_DEBUG === "true" && process.env.NODE_ENV !== "production" ? { retrievalDebug: retrieval.debug } : {})
@@ -305,6 +308,7 @@ export async function summarizeFauResource({ url, title, query, originalQuery, p
   return {
     groundedAnswer,
     sources: structuredSources.length ? structuredSources : [{ title: page.title || title, url: page.canonicalUrl || page.url }],
+    citationSources: structured.applicable ? structured.sources || [] : chunks.map(chunk => ({ title: chunk.pageTitle, url: chunk.pageUrl })),
     usefulLinks: usefulLinks.map(({ text, href, sectionHeading, sourcePageTitle }) => ({ text, href, sectionHeading, sourcePageTitle })),
     retrievalStatus: groundedAnswer.verified ? "verified" : "insufficient_content"
   };

@@ -12,8 +12,11 @@ import { retrieveTopChunks } from "./retrieval.js";
 import { checkSupabaseKeys, isSupabaseConfigured } from "./supabase.js";
 
 import { parseNavigationIntent } from "./navigation/intent.js";
+import { navigationContext } from "./navigation/diagnostics.js";
 import { navigate } from "./navigation/service.js";
 import { searchLocations } from "./navigation/resolver.js";
+import { loadUpcomingEvent } from './events.js';
+import { contextualQuestion } from './conversation.js';
 
 dotenv.config();
 
@@ -22,6 +25,7 @@ const distPath = path.resolve(__dirname, "../dist");
 
 const findSchema = z.object({
   question: z.string().min(3).max(600),
+  history: z.array(z.object({ question: z.string().min(3).max(600) })).max(6).optional(),
   useIndex: z.boolean().optional()
 });
 
@@ -84,7 +88,7 @@ export function createApp() {
   app.post("/api/navigation/route", aiLimiter, async (req, res, next) => {
     try {
       const data = validate(z.object({ from: z.string().max(180), to: z.string().max(180) }), req.body);
-      res.json(await navigate(data));
+      res.json(await navigate(data, undefined, navigationContext(req.path)));
     } catch (error) { next(error); }
   });
 
@@ -92,14 +96,19 @@ export function createApp() {
     res.json({ resources: fauResources });
   });
 
+  app.get('/api/events', async (_req, res) => {
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=60');
+    res.json(await loadUpcomingEvent());
+  });
+
   app.post("/api/ai/find", aiLimiter, async (req, res, next) => {
     try {
       const data = validate(findSchema, req.body);
       const intent = parseNavigationIntent(data.question);
-      if (intent) return res.json(await navigate(intent));
+      if (intent) return res.json(await navigate(intent, undefined, navigationContext(req.path)));
       // allow client to opt out of vector index retrieval by passing { useIndex: false }
       const useIndex = data.useIndex === undefined ? true : Boolean(data.useIndex);
-      res.json(await matchFauResources({ ...data, resources: fauResources, useIndex, skipPageAnswer: true }));
+      res.json(await matchFauResources({ ...data, question: contextualQuestion(data), resources: fauResources, useIndex, skipPageAnswer: true }));
     } catch (error) {
       next(error);
     }
@@ -109,9 +118,10 @@ export function createApp() {
     try {
       const data = validate(researchSchema, req.body);
       const intent = parseNavigationIntent(data.question);
-      if (intent) return res.json(await navigate(intent));
+      if (intent) return res.json(await navigate(intent, undefined, navigationContext(req.path)));
       res.json(await researchFauQuestion({
         ...data,
+        question: contextualQuestion(data),
         resources: fauResources,
         bypassCache: process.env.NODE_ENV === "production" ? false : Boolean(data.bypassCache)
       }));

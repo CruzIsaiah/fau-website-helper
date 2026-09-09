@@ -1,18 +1,19 @@
 import { Readable, Writable } from "node:stream";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../app.js";
 import { resetDb } from "../db.js";
 
 const app = createApp();
 
-function request(method, url, body) {
+function request(method, url, body, options = {}) {
   return new Promise((resolve, reject) => {
     const payload = body ? JSON.stringify(body) : "";
     const req = Readable.from(payload ? [payload] : []);
     const headers = {
       host: "localhost",
       "content-type": "application/json",
-      "content-length": Buffer.byteLength(payload)
+      "content-length": Buffer.byteLength(payload),
+      ...options.headers
     };
 
     Object.assign(req, {
@@ -20,8 +21,8 @@ function request(method, url, body) {
       url,
       originalUrl: url,
       headers,
-      connection: {},
-      socket: {}
+      connection: { remoteAddress: options.remoteAddress },
+      socket: { remoteAddress: options.remoteAddress }
     });
 
     let responseBody = "";
@@ -69,7 +70,7 @@ function request(method, url, body) {
       }
     });
 
-    app.handle(req, res, reject);
+    (options.app || app).handle(req, res, reject);
   });
 }
 
@@ -240,5 +241,26 @@ describe('navigation API dispatch', () => {
     const response = await request('POST', '/api/navigation/route', { from: 'moon', to: 'gym' });
     expect(response.body.status).toBe('needs_locations');
     expect(response.body.originResult.status).toBe('unknown');
+  });
+});
+
+
+describe('proxy-aware navigation rate limiting', () => {
+  it('uses the forwarded client IP with one trusted proxy and still enforces limits', async () => {
+    const proxied = createApp();
+    expect(proxied.get('trust proxy')).toBe(1);
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const infoLog = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const options = { app: proxied, remoteAddress: '10.0.0.1', headers: { 'x-forwarded-for': '198.51.100.1' } };
+    try {
+      for (let i = 0; i < 20; i++) expect((await request('POST', '/api/navigation/route', { from: 'unknown place', to: 'gym' }, options)).status).toBe(200);
+      expect((await request('POST', '/api/navigation/route', { from: 'unknown place', to: 'gym' }, options)).status).toBe(429);
+      const otherClient = { ...options, headers: { 'x-forwarded-for': '198.51.100.2' } };
+      expect((await request('POST', '/api/navigation/route', { from: 'unknown place', to: 'gym' }, otherClient)).status).toBe(200);
+      expect(errorLog).not.toHaveBeenCalled();
+      const entry = JSON.parse(infoLog.mock.calls[0][0]);
+      expect(entry).toMatchObject({ event: 'request', path: '/api/navigation/route' });
+      expect(entry.requestId).toBeTruthy();
+    } finally { errorLog.mockRestore(); infoLog.mockRestore(); }
   });
 });
